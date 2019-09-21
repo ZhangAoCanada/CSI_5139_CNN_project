@@ -1,8 +1,8 @@
 import os
 ##### set specific gpu #####
-os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
-
+# os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
+# os.environ["CUDA_VISIBLE_DEVICES"]="0"
+import colorsys
 import matplotlib
 matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
@@ -15,10 +15,22 @@ from keras.layers import Input
 from PIL import Image, ImageFont, ImageDraw
 from yolo3.model import yolo_eval, yolo_body, tiny_yolo_body
 
+def ColorsForPIL(class_names):
+    # Generate colors for drawing bounding boxes.
+    hsv_tuples = [(x / len(class_names), 1., 1.)
+                    for x in range(len(class_names))]
+    colors = list(map(lambda x: colorsys.hsv_to_rgb(*x), hsv_tuples))
+    colors = list(
+        map(lambda x: (int(x[0] * 255), int(x[1] * 255), int(x[2] * 255)),colors))
+    np.random.seed(10101)  # Fixed seed for consistent colors across runs.
+    np.random.shuffle(colors)  # Shuffle colors to decorrelate adjacent classes.
+    np.random.seed(None)  # Reset seed to default.
+    return colors
+
 def define_colors(class_names):
     num_classes = len(class_names)
     np.random.seed(11011)  # Fixed seed for consistent colors across runs.
-    colors = np.random.randint(num_classes, size = (num_classes, 3)).astype(np.float32) / float(num_classes)
+    colors = np.random.randint(num_classes, size = (num_classes, 3)).astype(np.float32) / float(num_classes) 
     return colors
 
 def font():
@@ -84,7 +96,7 @@ def letterbox_image(image, size):
     new_image.paste(image, ((w-nw)//2, (h-nh)//2))
     return new_image
 
-def main(image, anchors, class_names, model_path, input_shape, score_threshold = 0.3, iou_threshold = 0.45):
+def Detection(image, anchors, class_names, model_path, input_shape, score_threshold = 0.3, iou_threshold = 0.45):
     num_classes = len(class_names)
 
     boxed_image = letterbox_image(image, tuple(reversed(input_shape)))
@@ -129,7 +141,7 @@ if __name__ == "__main__":
 
     colors = define_colors(class_names)
 
-    pred_boxes, pred_scores, pred_classes = main(image, anchors, class_names, model_path, input_shape)
+    pred_boxes, pred_scores, pred_classes = Detection(image, anchors, class_names, model_path, input_shape)
 
     fig = plt.figure(figsize = (8,8))
     ax1 = fig.add_axes([0,0,1,1])

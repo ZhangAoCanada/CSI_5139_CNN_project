@@ -1,29 +1,29 @@
 import sys
 sys.path.insert(0, '../model/yolo_keras_customized_output')
-
+import colorsys
 import matplotlib
 matplotlib.use("tkagg")
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image, ImageFont, ImageDraw
 from glob import glob
-import output_test
+from output_test import define_colors, get_anchors, get_class, define_colors, Detection, ColorsForPIL
 
 def YoloKerasPred(image):
-    model_path = "model_data/yolo.h5"
-    classes_path = "model_data/coco_classes.txt"
-    anchors_path = "model_data/yolo_anchors.txt"
+    model_path = "../model/yolo_keras_customized_output/model_data/yolo.h5"
+    classes_path = "../model/yolo_keras_customized_output/model_data/coco_classes.txt"
+    anchors_path = "../model/yolo_keras_customized_output/model_data/yolo_anchors.txt"
     input_shape = (416, 416)
 
     anchors = get_anchors(anchors_path)
     class_names = get_class(classes_path)
-    colors = define_colors(class_names)
-    pred_boxes, pred_scores, pred_classes = main(image, anchors, class_names, model_path, input_shape)
+    colors = ColorsForPIL(class_names)
+    pred_boxes, pred_scores, pred_classes = Detection(image, anchors, class_names, model_path, input_shape)
 
     draw = ImageDraw.Draw(image)
 
-    font = ImageFont.truetype(font='font/FiraMono-Medium.otf',
-                    size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
+    font = ImageFont.truetype(font='/usr/share/fonts/truetype/ttf-khmeros-core/KhmerOS.ttf', 
+                            size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
     thickness = (image.size[0] + image.size[1]) // 300
 
     if len(pred_boxes) == 0:
@@ -35,14 +35,15 @@ def YoloKerasPred(image):
             box = pred_boxes[index]
             score = pred_scores[index]
             current_color = colors[class_ind]
+            current_color = (current_color[0], current_color[1], current_color[2])
 
             label = '{} {:.2f}'.format(pred_current_class, score)
             draw = ImageDraw.Draw(image)
             label_size = draw.textsize(label, font)
 
             y, x, ymax, xmax = box
-            # w = xmax - x
-            # h = ymax - y
+            w = xmax - x
+            h = ymax - y
 
             if y - label_size[1] >= 0:
                 text_origin = np.array([x, y - label_size[1]])
@@ -87,25 +88,33 @@ def ReadAndPlotImages(kitti_dir, if_plot = True):
     all_img_names = glob(disparity_occlude_dir + "*.png")
     total_disparity_num = len(all_img_names)
 
-    for i in range(total_disparity_num):
+    for i in range(1):
         img_count = str(i)
         zero_len = name_len - len(img_count)
         img_name = (zero_len * "0") + img_count + "_10.png"
 
-        disp_img = np.array(Image.open(disparity_noc_dir + img_name))#.resize((621, 188)))
+        disp_img = np.array(Image.open(disparity_noc_dir + img_name))
+        left_img = Image.open(left_img_dir + img_name)
+        right_img = Image.open(right_img_dir + img_name)
+        obj_img = np.array(Image.open(obj_dir + img_name))
 
-        left_img = np.array(Image.open(left_img_dir + img_name))#.resize((621, 188)))
-        right_img = np.array(Image.open(right_img_dir + img_name))#.resize((621, 188)))
-        obj_img = np.array(Image.open(obj_dir + img_name))#.resize((621, 188)))
+        left_detect, left_boxes = YoloKerasPred(left_img)
+        right_detect, right_boxes = YoloKerasPred(right_img)
+
+        left_img = np.array(left_img)
+        right_img = np.array(right_img)
+
+        if left_img is None:
+            raise ValueError("Wrong kitti dataset directory.")
 
         if if_plot:
             plt.cla()
             ax1.clear()
             ax1.axis("off")
-            ax1.imshow(left_img)
+            ax1.imshow(left_detect)
             ax2.clear()
             ax2.axis("off")
-            ax2.imshow(right_img)
+            ax2.imshow(right_detect)
             ax3.clear()
             ax3.axis("off")
             ax3.imshow(disp_img)
@@ -113,17 +122,12 @@ def ReadAndPlotImages(kitti_dir, if_plot = True):
             ax4.axis("off")
             ax4.imshow(obj_img)
             fig.canvas.draw()
-            plt.pause(2)
-
-    return left_img
+            plt.savefig("detect_test.png")
+            plt.pause(9999)
 
 
 if __name__ == "__main__":
     
-    kitti_dir = "/home/azhang/Documents/kitti/training/"
+    kitti_dir = "/home/aozhang2/Documents/kitti/training/"
 
-    img_test = ReadAndPlotImages(kitti_dir, if_plot = False)
-    imgttt = YoloKerasPred(img_test)
-
-    plt.imshow(imgttt)
-    plt.show()
+    ReadAndPlotImages(kitti_dir, if_plot = True)
