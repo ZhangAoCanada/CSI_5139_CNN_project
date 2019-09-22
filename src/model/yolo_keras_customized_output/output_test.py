@@ -15,6 +15,29 @@ from keras.layers import Input
 from PIL import Image, ImageFont, ImageDraw
 from yolo3.model import yolo_eval, yolo_body, tiny_yolo_body
 
+def FontsAndThickness(image):
+    font = ImageFont.truetype(font='/usr/share/fonts/truetype/ttf-khmeros-core/KhmerOS.ttf', 
+                            size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
+    thickness = (image.size[0] + image.size[1]) // 300
+    return font, thickness
+
+def DrawBox(image, x, y, xmax, ymax, label, font, color, thickness):
+    draw = ImageDraw.Draw(image)
+    label_size = draw.textsize(label, font)
+    if y - label_size[1] >= 0:
+        text_origin = np.array([x, y - label_size[1]])
+    else:
+        text_origin = np.array([x, y + 1])
+    for i in range(thickness):
+        draw.rectangle([x + i, y + i, xmax - i, ymax - i],
+                        outline=color)
+    draw.rectangle(
+        [tuple(text_origin), tuple(text_origin + label_size)],
+        fill=color)
+    draw.text(text_origin, label, fill=(0, 0, 0), font=font)
+    del draw
+    return image
+
 def ColorsForPIL(class_names):
     # Generate colors for drawing bounding boxes.
     hsv_tuples = [(x / len(class_names), 1., 1.)
@@ -120,7 +143,7 @@ def Detection(image, anchors, class_names, model_path, input_shape, score_thresh
                 K.learning_phase(): 0
             })
 
-    print('Found {} boxes for {}'.format(len(out_boxes), 'img'))
+    # print('Found {} boxes for {}'.format(len(out_boxes), 'img'))
     return out_boxes, out_scores, out_classes
 
 if __name__ == "__main__":
