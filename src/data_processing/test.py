@@ -1,5 +1,4 @@
 import numpy as np
-a = 1.1
-b = np.floor(a).astype(np.int32)
 
-print(b)
+for i in range(0, 2):
+    print(i)

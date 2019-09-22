@@ -2,7 +2,7 @@ import sys
 sys.path.insert(0, '../model/yolo_keras_customized_output')
 # import matplotlib
 # matplotlib.use("tkagg")
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image, ImageFont, ImageDraw
 from glob import glob
@@ -120,14 +120,7 @@ def ReadAndPlotImages(kitti_dir):
     all_img_names = glob(disparity_occlude_dir + "*.png")
     total_disparity_num = len(all_img_names)
 
-    plt.ion()
-    fig = plt.figure(figsize = (15, 6))
-    ax1 = fig.add_subplot(221)
-    ax2 = fig.add_subplot(222)
-    ax3 = fig.add_subplot(223)
-    ax4 = fig.add_subplot(224)
-
-    for i in tqdm(range(total_disparity_num)):
+    for i in tqdm(range(50)):
         img_count = str(i)
         zero_len = name_len - len(img_count)
         img_name = (zero_len * "0") + img_count + "_10.png"
@@ -136,6 +129,8 @@ def ReadAndPlotImages(kitti_dir):
         left_img = Image.open(left_img_dir + img_name)
         right_img = Image.open(right_img_dir + img_name)
         obj_img = np.array(Image.open(obj_dir + img_name))
+        left_img_arr = np.array(left_img)
+        right_img_arr = np.array(right_img)
 
         if left_img is None:
             raise ValueError("Wrong kitti dataset directory.")
@@ -143,29 +138,22 @@ def ReadAndPlotImages(kitti_dir):
         left_det, left_boxes = YoloKerasPred(left_img)
         right_det, right_boxes = YoloKerasPred(right_img)
 
-        left_img = np.array(left_img)
-        right_img = np.array(right_img)
-
         left_fit_boxes, right_fit_boxes = FindObjBox(obj_img, left_boxes, right_boxes)
 
         # remove all non-object pixels
-        left_remove, right_remove = RemoveUndetectedArea(left_img, right_img,
+        left_remove, right_remove = RemoveUndetectedArea(left_img_arr, right_img_arr,
                                             left_fit_boxes, right_fit_boxes)
 
-        plt.cla()
-        ax1.clear()
-        ax1.axis("off")
-        ax1.imshow(left_det)
-        ax2.clear()
-        ax2.axis("off")
-        ax2.imshow(right_det)
-        ax3.clear()
-        ax3.axis("off")
-        ax3.imshow(disp_img)
-        ax4.clear()
-        ax4.axis("off")
-        ax4.imshow(obj_img)
-        plt.savefig("kitti_obj_test/" + str(i) + ".png")
+        left_right_detection = np.concatenate([left_det, right_det], axis = 0)
+        left_right_remove = np.concatenate([left_remove, right_remove], axis = 0)
+        disp_obj = np.concatenate([disp_img, obj_img], axis = 0)
+
+        all_imgs_format = Image.fromarray(left_right_detection)
+        all_imgs_remove_format = Image.fromarray(left_right_remove)
+        all_disp_format = Image.fromarray(disp_obj)
+        all_imgs_format.save("kitti_obj_test/imgs" + str(i) + ".png", "PNG")
+        all_imgs_remove_format.save("kitti_obj_test/irem" + str(i) + ".png", "PNG")
+        all_disp_format.save("kitti_obj_test/disp" + str(i) + ".png", "PNG")
 
 if __name__ == "__main__":
     
