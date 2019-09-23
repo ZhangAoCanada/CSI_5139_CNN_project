@@ -7,16 +7,29 @@ from tqdm import tqdm
 from glob import glob
 
 def TransferDispAndObj(kitti_dir):
+
+    """
+    Function:
+        read the disparity map and object map, normalize them, concatenate them,
+        then save them.
+    Args:
+        kitti_dir               ->              directory path for kitti dataset
+    """
+
+    # paths for different images
     disparity_occlude_dir = kitti_dir +  "disp_occ_0/"
     disparity_noc_dir = kitti_dir +  "disp_noc_0/"
     obj_dir = kitti_dir + "obj_map/"
 
     name_len = 6
+    # read only 50 images for test
     total_num_imgs = 50
 
+    # find out how many images are there
     all_img_names = glob(disparity_occlude_dir + "*.png")
     total_disparity_num = len(all_img_names)
 
+    # read and normalize the images
     for i in tqdm(range(total_num_imgs)):
         img_count = str(i)
         zero_len = name_len - len(img_count)
@@ -27,6 +40,7 @@ def TransferDispAndObj(kitti_dir):
         plt.imsave("middel_transfer/disp" + str(i) + ".png", disp_img)
         plt.imsave("middel_transfer/obj" + str(i) + ".png", obj_img)
 
+    # concatenate the images
     for i in tqdm(range(total_num_imgs)):
         disp_cur = np.array(Image.open("middel_transfer/disp" + str(i) + ".png"))
         obj_cur = np.array(Image.open("middel_transfer/obj" + str(i) + ".png"))
@@ -37,10 +51,22 @@ def TransferDispAndObj(kitti_dir):
         plt.imsave("kitti_obj_test/disp" + str(i) + ".png", dispobj_img)
 
 def ReadFromDir(dirct, if_plot = True):
+
+    """
+    Function:
+        read all the results (yolo, pixels removal, and disparity) and plot together for visualize.
+
+    Args:
+        dirct               ->              directory of all the results
+        if_plot             ->              whether to plot all results
+    """
+
+    # define paths
     yolo_imgs_pre = dirct + "imgs"
     removal_pre = dirct + "irem"
     dispobj_pre = dirct + "disp"
 
+    # total number of images
     total_num = 50
 
     if if_plot:
@@ -48,6 +74,7 @@ def ReadFromDir(dirct, if_plot = True):
         fig = plt.figure(figsize = (16,8))
         ax1 = fig.add_subplot(111)
 
+    # read and plot
     for i in tqdm(range(total_num)):
         yolo_img = np.array(Image.open(yolo_imgs_pre + str(i) + ".png"))
         remov_img = np.array(Image.open(removal_pre + str(i) + ".png"))
@@ -58,7 +85,6 @@ def ReadFromDir(dirct, if_plot = True):
             continue
 
         display_yolo = np.concatenate([yolo_img, remov_img, disp_img], axis = 1)
-        # display_remov = np.concatenate([remov_img, disp_img], axis = 1)
         
         if if_plot:
             plt.cla()
