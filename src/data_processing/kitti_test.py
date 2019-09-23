@@ -157,6 +157,6 @@ def ReadAndPlotImages(kitti_dir):
 
 if __name__ == "__main__":
     
-    kitti_dir = "/home/aozhang2/Documents/kitti/training/"
+    kitti_dir = "/home/azhang/Documents/kitti/training/"
 
     ReadAndPlotImages(kitti_dir)
