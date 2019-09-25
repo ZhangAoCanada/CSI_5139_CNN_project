@@ -1,6 +1,10 @@
 """
 Combine kitti stereo data with Yolov3 detection.
 """
+import os
+##### set specific gpu #####
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 import sys
 sys.path.insert(0, '../model/yolo_keras_customized_output')
 # import matplotlib
@@ -34,11 +38,11 @@ def YoloKerasPred(image, w_threshold = 0, h_threshold = 0):
     class_names = get_class(classes_path)
     colors = ColorsForPIL(class_names)
 
-    # get the prediction from the yolov3 model (GPU involved !)
-    pred_boxes, pred_scores, pred_classes = Detection(image, anchors, class_names, model_path, input_shape)
-
     # since the model is trained under the fixed input size (416, 416)
     input_shape = (416, 416)
+
+    # get the prediction from the yolov3 model (GPU involved !)
+    pred_boxes, pred_scores, pred_classes = Detection(image, anchors, class_names, model_path, input_shape)
 
     # define the font format, box format to make the box more attractive
     font, thickness = FontsAndThickness(image)
@@ -217,7 +221,9 @@ def ReadAndPlotImages(kitti_dir):
     all_img_names = glob(disparity_occlude_dir + "*.png")
     total_disparity_num = len(all_img_names)
 
-    for i in tqdm(range(42, 50)):
+    wield_number = 49
+
+    for i in tqdm(range(wield_number, total_disparity_num)):
         img_count = str(i)
         zero_len = name_len - len(img_count)
         img_name = (zero_len * "0") + img_count + "_10.png"
@@ -229,28 +235,35 @@ def ReadAndPlotImages(kitti_dir):
         left_img_arr = np.array(left_img)
         right_img_arr = np.array(right_img)
 
-        if left_img is None:
+        if left_img is None or right_img is None:
             raise ValueError("Wrong kitti dataset directory.")
 
         left_det, left_boxes = YoloKerasPred(left_img)
         right_det, right_boxes = YoloKerasPred(right_img)
 
-        left_fit_boxes, right_fit_boxes = FindObjBox(obj_img, left_boxes, right_boxes)
+        # left_fit_boxes, right_fit_boxes = FindObjBox(obj_img, left_boxes, right_boxes)
 
-        # remove all non-object pixels
-        left_remove, right_remove = RemoveUndetectedArea(left_img_arr, right_img_arr,
-                                            left_fit_boxes, right_fit_boxes)
+        # # remove all non-object pixels
+        # left_remove, right_remove = RemoveUndetectedArea(left_img_arr, right_img_arr,
+        #                                     left_fit_boxes, right_fit_boxes)
 
-        left_right_detection = np.concatenate([left_det, right_det], axis = 0)
-        left_right_remove = np.concatenate([left_remove, right_remove], axis = 0)
-        disp_obj = np.concatenate([disp_img, obj_img], axis = 0)
+        # left_right_detection = np.concatenate([left_det, right_det], axis = 0)
+        # left_right_remove = np.concatenate([left_remove, right_remove], axis = 0)
+        # disp_obj = np.concatenate([disp_img, obj_img], axis = 0)
 
-        all_imgs_format = Image.fromarray(left_right_detection)
-        all_imgs_remove_format = Image.fromarray(left_right_remove)
-        all_disp_format = Image.fromarray(disp_obj)
-        all_imgs_format.save("kitti_obj_test/imgs" + str(i) + ".png", "PNG")
-        all_imgs_remove_format.save("kitti_obj_test/irem" + str(i) + ".png", "PNG")
-        all_disp_format.save("kitti_obj_test/disp" + str(i) + ".png", "PNG")
+        # all_imgs_format = Image.fromarray(left_right_detection)
+
+        # all_imgs_remove_format = Image.fromarray(left_right_remove)
+        # all_disp_format = Image.fromarray(disp_obj)
+        # all_imgs_format.save("kitti_obj_test/imgs" + str(i) + ".png", "PNG")
+        # all_imgs_remove_format.save("kitti_obj_test/irem" + str(i) + ".png", "PNG")
+        # all_disp_format.save("kitti_obj_test/disp" + str(i) + ".png", "PNG")
+
+        left_det.save("kitti_obj_test/left_yolo" + str(i) + ".png", "PNG")
+        right_det.save("kitti_obj_test/right_yolo" + str(i) + ".png", "PNG")
+        np.save("kitti_obj_test/left_box" + str(i) + ".npy", left_boxes)
+        np.save("kitti_obj_test/right_box" + str(i) + ".npy", right_boxes)
+
 
 if __name__ == "__main__":
     
