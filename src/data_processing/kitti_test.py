@@ -221,7 +221,7 @@ def ReadAndPlotImages(kitti_dir):
     all_img_names = glob(disparity_occlude_dir + "*.png")
     total_disparity_num = len(all_img_names)
 
-    wield_number = 168
+    wield_number = 192
 
     for i in tqdm(range(wield_number, total_disparity_num)):
         img_count = str(i)
