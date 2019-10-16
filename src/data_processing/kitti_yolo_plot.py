@@ -92,11 +92,11 @@ def ReadFromDir(dirct, if_plot = True):
             ax1.axis("off")
             ax1.imshow(display_yolo)
             fig.canvas.draw()
-            plt.pause(0.1)
+            plt.pause(1)
 
 if __name__ == "__main__":
     image_directory = "kitti_obj_test/"
-    kitti_directory = "/home/azhang/Documents/kitti/training/"
+    kitti_directory = "/home/azhang/Documents/kitti/2015/training/"
 
     disp_obj_num = len(glob(image_directory + "disp*.png"))
 
