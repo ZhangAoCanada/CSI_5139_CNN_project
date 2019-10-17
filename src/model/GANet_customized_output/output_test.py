@@ -1,4 +1,8 @@
 from __future__ import print_function
+##### set specific gpu #####
+import os
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 import argparse
 import skimage
 import skimage.io
@@ -21,6 +25,7 @@ from dataloader.data import get_test_set
 import numpy as np
 from models.GANet_deep import GANet
 from glob import glob
+from tqdm import tqdm
 
 # feel free to tune this
 max_disp = 192
@@ -110,15 +115,15 @@ def test(leftname, rightname, savename):
     skimage.io.imsave(savename, (temp * 256).astype('uint16'))
 
 def PredDisp(kitti_dir, save_dir):
-    left_img_dir = kitti_dir + "image_0/"
-    right_img_dir = kitti_dir + "image_1/"
+    left_img_dir = kitti_dir + "colored_0/"
+    right_img_dir = kitti_dir + "colored_1/"
 
     name_len = 6
 
     all_img_names = glob(left_img_dir + "*10.png")
     total_disparity_num = len(all_img_names)
 
-    for i in range(total_disparity_num):
+    for i in tqdm(range(total_disparity_num)):
         img_count = str(i)
         zero_len = name_len - len(img_count)
         img_name = (zero_len * "0") + img_count + "_10.png"
