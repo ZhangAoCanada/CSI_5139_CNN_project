@@ -199,7 +199,7 @@ def MRcnnPred(model, image):
     r = results[0]
     return r    
 
-def main(kitti_dir, if_2015 = True, if_save = True):
+def main(kitti_dir, if_2015 = True, if_save = False):
     """
     Function:
         main function, for reading, predicting, and plotting
