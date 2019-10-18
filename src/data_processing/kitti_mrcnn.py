@@ -24,6 +24,7 @@ from skimage.util import img_as_ubyte
 
 from glob import glob
 from tqdm import tqdm
+import pickle
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../model/mrcnn/")
@@ -198,26 +199,32 @@ def MRcnnPred(model, image):
     r = results[0]
     return r    
 
-def main(kitti_dir):
+def main(kitti_dir, if_2015 = True, if_save = True):
     """
     Function:
         main function, for reading, predicting, and plotting
     """
-    disparity_occlude_dir = kitti_dir +  "disp_occ_0/"
-    disparity_noc_dir = kitti_dir +  "disp_noc_0/"
-
-    left_img_dir = kitti_dir + "image_2/"
-    right_img_dir = kitti_dir + "image_3/"
-    obj_dir = kitti_dir + "obj_map/"
-
-    GANet_disp_dir = "train_2015_GANet/"
+    if if_2015:
+        disparity_occlude_dir = kitti_dir +  "disp_occ_0/"
+        disparity_noc_dir = kitti_dir +  "disp_noc_0/"
+        left_img_dir = kitti_dir + "image_2/"
+        right_img_dir = kitti_dir + "image_3/"
+        GANet_disp_dir = "train_2015_GANet/"
+        prefix = "train_2015_mrcnn/"
+    else:
+        disparity_occlude_dir = kitti_dir +  "disp_occ/"
+        disparity_noc_dir = kitti_dir +  "disp_noc/"    
+        left_img_dir = kitti_dir + "colored_0/"
+        right_img_dir = kitti_dir + "colored_1/"
+        GANet_disp_dir = "train_2012_GANet/"
+        prefix = "train_2012_mrcnn/"
 
     name_len = 6
 
     all_img_names = glob(disparity_occlude_dir + "*.png")
     total_disparity_num = len(all_img_names)
 
-    wield_number = 0
+    wield_number = 90
 
     # Pre-define all colors
     colors_all = random_colors(81)
@@ -232,13 +239,13 @@ def main(kitti_dir):
     for i in tqdm(range(wield_number, total_disparity_num)):
         img_count = str(i)
         zero_len = name_len - len(img_count)
-        img_name = (zero_len * "0") + img_count + "_10.png"
+        img_name = (zero_len * "0") + img_count + "_10"
 
-        disp_img = skimage.io.imread(disparity_noc_dir + img_name)
-        left_img = skimage.io.imread(left_img_dir + img_name)
-        right_img = skimage.io.imread(right_img_dir + img_name)
-        obj_img = skimage.io.imread(obj_dir + img_name)
-        GANet_img = skimage.io.imread(GANet_disp_dir + img_name)
+        # disp_img = skimage.io.imread(disparity_noc_dir + img_name)
+        left_img = skimage.io.imread(left_img_dir + img_name + ".png")
+        right_img = skimage.io.imread(right_img_dir + img_name + ".png")
+        # obj_img = skimage.io.imread(obj_dir + img_name)
+        GANet_img = skimage.io.imread(GANet_disp_dir + img_name + ".png")
         GANet_img = skimage.color.gray2rgb(GANet_img)
         GANet_img = img_as_ubyte(GANet_img)
 
@@ -259,6 +266,10 @@ def main(kitti_dir):
                                         class_names, r['scores'], colors = colors_all, 
                                         ax = ax1, fig = fig)
 
+        if if_save:
+            with open(prefix + img_name + ".pickle", "wb") as fp:
+                pickle.dump(r, fp)
+
         display_image = np.concatenate([masked_img1, masked_img2], axis = 0)
         ax1.clear()
         ax1.imshow(display_image.astype(np.uint8))
@@ -267,6 +278,8 @@ def main(kitti_dir):
 
 if __name__ == "__main__":
     
-    kitti_dir = "/home/azhang/Documents/kitti/2015/training/"
+    kitti_dir_2015 = "/home/azhang/Documents/kitti/2015/training/"
+    kitti_dir_2012 = "/home/azhang/Documents/kitti/2012/training/"
 
-    main(kitti_dir)
+    main(kitti_dir_2015, True)
+    # main(kitti_dir_2012, False)
