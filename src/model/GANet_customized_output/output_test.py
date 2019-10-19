@@ -114,9 +114,13 @@ def test(leftname, rightname, savename):
         temp = temp[0, :, :]
     skimage.io.imsave(savename, (temp * 256).astype('uint16'))
 
-def PredDisp(kitti_dir, save_dir):
-    left_img_dir = kitti_dir + "colored_0/"
-    right_img_dir = kitti_dir + "colored_1/"
+def PredDisp(kitti_dir, save_dir, if_2015 = True):
+    if if_2015:
+        left_img_dir = kitti_dir + "image_2/"
+        right_img_dir = kitti_dir + "image_3/"
+    else:
+        left_img_dir = kitti_dir + "colored_0/"
+        right_img_dir = kitti_dir + "colored_1/"
 
     name_len = 6
 
@@ -135,7 +139,12 @@ def PredDisp(kitti_dir, save_dir):
 
 
 if __name__ == "__main__":
-    kitti_dir = "/home/azhang/Documents/kitti/2012/training/"
+
+    # kitti_dir_2012_test = "/home/azhang/Documents/kitti/2012/testing/"
+    # kitti_dir_2012_train = "/home/azhang/Documents/kitti/2012/training/"
+    kitti_dir_2015_test = "/home/azhang/Documents/kitti/2015/testing/"
+    # kitti_dir_2015_train = "/home/azhang/Documents/kitti/2015/training/"
+
     save_dir = "./result/"
 
-    PredDisp(kitti_dir, save_dir)
+    PredDisp(kitti_dir_2015_test, save_dir, True)

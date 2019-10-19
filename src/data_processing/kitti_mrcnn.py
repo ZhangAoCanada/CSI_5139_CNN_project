@@ -199,32 +199,30 @@ def MRcnnPred(model, image):
     r = results[0]
     return r    
 
-def main(kitti_dir, if_2015 = True, if_save = False):
+def main(kitti_dir, prefix, mode = "test", if_2015 = True, if_save = True):
     """
     Function:
         main function, for reading, predicting, and plotting
     """
     if if_2015:
-        disparity_occlude_dir = kitti_dir +  "disp_occ_0/"
-        disparity_noc_dir = kitti_dir +  "disp_noc_0/"
+        # disparity_occlude_dir = kitti_dir +  "disp_occ_0/"
+        # disparity_noc_dir = kitti_dir +  "disp_noc_0/"
         left_img_dir = kitti_dir + "image_2/"
         right_img_dir = kitti_dir + "image_3/"
-        GANet_disp_dir = "train_2015_GANet/"
-        prefix = "train_2015_mrcnn/"
+        GANet_disp_dir = mode + "_2015_GANet/"
     else:
-        disparity_occlude_dir = kitti_dir +  "disp_occ/"
-        disparity_noc_dir = kitti_dir +  "disp_noc/"    
+        # disparity_occlude_dir = kitti_dir +  "disp_occ/"
+        # disparity_noc_dir = kitti_dir +  "disp_noc/"    
         left_img_dir = kitti_dir + "colored_0/"
         right_img_dir = kitti_dir + "colored_1/"
-        GANet_disp_dir = "train_2012_GANet/"
-        prefix = "train_2012_mrcnn/"
+        GANet_disp_dir = mode + "_2012_GANet/"
 
     name_len = 6
 
-    all_img_names = glob(disparity_occlude_dir + "*.png")
-    total_disparity_num = len(all_img_names)
+    all_img_names = glob(left_img_dir + "*.png")
+    total_disparity_num = len(all_img_names) // 2
 
-    wield_number = 90
+    wield_number = 0
 
     # Pre-define all colors
     colors_all = random_colors(81)
@@ -274,12 +272,23 @@ def main(kitti_dir, if_2015 = True, if_save = False):
         ax1.clear()
         ax1.imshow(display_image.astype(np.uint8))
         fig.canvas.draw()
-        plt.pause(0.1)
+        plt.pause(0.01)
 
 if __name__ == "__main__":
     
-    kitti_dir_2015 = "/home/azhang/Documents/kitti/2015/training/"
-    kitti_dir_2012 = "/home/azhang/Documents/kitti/2012/training/"
+    kitti_dir_2015_train = "/home/azhang/Documents/kitti/2015/training/"
+    prefix_2015_train = "train_2015_mrcnn/"
 
-    main(kitti_dir_2015, True)
-    # main(kitti_dir_2012, False)
+    kitti_dir_2012_train = "/home/azhang/Documents/kitti/2012/training/"
+    prefix_2012_train = "train_2012_mrcnn/"
+
+    kitti_dir_2015_test = "/home/azhang/Documents/kitti/2015/testing/"
+    prefix_2015_test = "test_2015_mrcnn/"
+
+    kitti_dir_2012_test = "/home/azhang/Documents/kitti/2012/testing/"
+    prefix_2012_test = "test_2012_mrcnn/"
+
+    # main(kitti_dir_2015_train, prefix_2015_train, mode = "train", if_2015 = True)
+    # main(kitti_dir_2012_train, prefix_2012_train, mode = "train", if_2015 = False)
+    # main(kitti_dir_2015_test, prefix_2015_test, mode = "test", if_2015 = True)
+    main(kitti_dir_2012_test, prefix_2012_test, mode = "test", if_2015 = False)
