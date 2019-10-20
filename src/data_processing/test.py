@@ -1,24 +1,31 @@
-import sys
-sys.path.insert(0, '../model/mrcnn')
-import random
-import math
+import os
+##### set specific gpu #####
+os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
+
 import numpy as np
-import skimage.io
-import skimage.color
-import matplotlib
-matplotlib.use('tkagg')
-import colorsys
-from skimage.measure import find_contours
-import matplotlib.pyplot as plt
-from matplotlib import patches,  lines
-from matplotlib.patches import Polygon
+import tensorflow as tf
+import tensorflow.keras.layers as L
 
-from glob import glob
-from tqdm import tqdm
 
-a = np.arange(1000)
+a = np.ones([1, 10, 10, 3])
+# a = np.expand_dims(a, axis = 0)
 
-b = 2 * a
+innnn = tf.placeholder(tf.float32, [None, 10, 10, 3])
 
-plt.plot(a, b)
-plt.show()
+b = L.Conv2D(10, [3, 3])(innnn)
+
+c = L.Conv2DTranspose(3, [3, 3])(b)
+
+init = tf.initializers.global_variables()
+
+sess = tf.Session()
+
+sess.run(init)
+
+bb, cc = sess.run([b, c], feed_dict = {innnn: a})
+
+print(bb.shape)
+print(cc.shape)
+
+
