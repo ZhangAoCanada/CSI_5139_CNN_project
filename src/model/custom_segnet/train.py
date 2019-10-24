@@ -64,8 +64,8 @@ def ChangeSize(gt, input_size, scale):
     gt_new[w_left:w_left+w, h_top:h_top+h] = gt
     return gt_new
 
-all_ims = glob("../../data_processing/train_in/10.png")
-all_las = glob("../../data_processing/train_out/10.npy")
+all_ims = glob("../../data_processing/train_in/20.png")
+all_las = glob("../../data_processing/train_out/20.npy")
 
 ###############################################################
 # plt.ion()
