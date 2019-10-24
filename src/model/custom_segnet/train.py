@@ -127,7 +127,7 @@ loss = convsegModel.RegularLoss()
 # loss = convsegModel.IoULoss()
 
 training = convsegModel.Optimization()
-overall, precision, recall = convsegModel.Metrics()
+# overall, precision, recall = convsegModel.Metrics()
 
 # summary_loss = tf.summary.scalar("loss", loss)
 # streaming_overall, streaming_overall_update = tf.contrib.metrics.streaming_mean(overall)
@@ -144,6 +144,7 @@ init = tf.global_variables_initializer()
 gpu_options = tf.GPUOptions(allow_growth=True)
 
 with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
+    tf.keras.backend.set_session(sess)
     # summaries_train = 'logs/train/'
     # summaries_test = 'logs/test/'
     # train_writer = tf.summary.FileWriter(summaries_train + "original_loss", sess.graph)
@@ -152,12 +153,11 @@ with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
     for i in range(1000):
         sess.run(training, feed_dict = {convsegModel.X: oneimg,
                                         convsegModel.Y: onegt})
-        l, io, p, r = sess.run([loss, overall, precision, recall], \
+        l = sess.run(loss, \
                                 feed_dict = {convsegModel.X: oneimg,
                                             convsegModel.Y: onegt})
         print("-------------------------------")
         print("loss:", l)
-        print("others:", [io, p, r])
     # for batch_imgs, batch_gts in dataGo.GetBatchData():
     #     test1 = sess.run(overall, feed_dict = {convsegModel.X: batch_imgs,
     #                                         convsegModel.Y: batch_gts})

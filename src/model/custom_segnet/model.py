@@ -5,6 +5,8 @@ os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 import tensorflow as tf
 import tensorflow.keras.layers as L
+from tensorflow.keras import Model
+from tensorflow.keras.backend import binary_crossentropy
 import tensorflow.nn as N
 import numpy as np
 
@@ -71,17 +73,17 @@ class ConvSegNet:
 
     def ConvSegBody(self):
         x = self.FirstLayer(self.X, 32, 3)
-        x = self.ConvIterateBlock(x, 32, 3)
-        # x = self.ConvIterateBlock(x, 64, 3)
-        # x = self.ConvIterateBlock(x, 128, 3)
-        # x = self.ConvIterateBlock(x, 256, 3)
-        # x = self.ConvIterateBlock(x, 256, 3)
+        # x = self.ConvIterateBlock(x, 32, 3)
+        # # x = self.ConvIterateBlock(x, 64, 3)
+        # # x = self.ConvIterateBlock(x, 128, 3)
+        # # x = self.ConvIterateBlock(x, 256, 3)
+        # # x = self.ConvIterateBlock(x, 256, 3)
 
-        # x = self.DeConvIterateBlock(x, 256, 3)
-        # x = self.DeConvIterateBlock(x, 256, 3)
-        # x = self.DeConvIterateBlock(x, 128, 3)
-        # x = self.DeConvIterateBlock(x, 64, 3)
-        x = self.DeConvIterateBlock(x, 32, 3)
+        # # x = self.DeConvIterateBlock(x, 256, 3)
+        # # x = self.DeConvIterateBlock(x, 256, 3)
+        # # x = self.DeConvIterateBlock(x, 128, 3)
+        # # x = self.DeConvIterateBlock(x, 64, 3)
+        # x = self.DeConvIterateBlock(x, 32, 3)
         x = self.LastLayer(x, 32, 3)
         return x
 
@@ -91,12 +93,12 @@ class ConvSegNet:
         return seg_pred
 
     def RegularLoss(self):
-        pred = self.ConvSegBody()
-        # logits = tf.reshape(pred, [-1,])
-        # labels = tf.reshape(self.Y, [-1,])
-        # loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels, logits=logits)
-        # loss = tf.reduce_mean(loss)
-        loss = tf.reduce_mean(tf.square(tf.sigmoid(pred) - self.Y))
+        pred = self.SegPred()
+        logits = tf.reshape(pred, [-1,])
+        labels = tf.reshape(self.Y, [-1,])
+        loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits)
+        loss = tf.reduce_mean(loss)
+        # loss = tf.reduce_mean(tf.square(tf.sigmoid(pred) - self.Y))
         return loss
 
     def WeightLoss(self):
@@ -140,10 +142,10 @@ class ConvSegNet:
 
     def Optimization(self):
         loss = self.RegularLoss()
-        # optimizer = tf.train.AdamOptimizer(learning_rate = self.learning_rate)
-        # learning_operation = optimizer.minimize(loss, global_step = self.global_step)
-        optimizer = tf.train.AdamOptimizer(learning_rate = 0.01)
-        learning_operation = optimizer.minimize(loss)
+        optimizer = tf.train.AdamOptimizer(learning_rate = self.learning_rate)
+        learning_operation = optimizer.minimize(loss, global_step = self.global_step)
+        # optimizer = tf.train.GradientDescentOptimizer(0.01)
+        # learning_operation = optimizer.minimize(loss)
         return learning_operation
 
     def Metrics(self):
