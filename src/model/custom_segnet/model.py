@@ -41,14 +41,14 @@ class ConvSegNet:
         x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(2,2), padding='same')
         x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
         for i in range(num_iteration):
-            x = self.Conv2D_BN_ReLU(x, filters//2, [1,1], strides=(1,1), padding='same')
+            x = self.Conv2D_BN_ReLU(x, filters, [1,1], strides=(1,1), padding='same')
             x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
         return x
 
     def DeConvIterateBlock(self, x, filters, num_iteration):
         x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
         for i in range(num_iteration):
-            x = self.Conv2D_BN_ReLU(x, filters//2, [1,1], strides=(1,1), padding='same')
+            x = self.Conv2D_BN_ReLU(x, filters, [1,1], strides=(1,1), padding='same')
             x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
         x = self.DeConv2D_BN_ReLU(x, filters, [3,3], strides=(2,2), padding='same')
         return x
