@@ -1,2 +1,3 @@
 src/model/yolo_keras_customized_output/yolov3.weights
 src/model/yolo_keras_customized_output/model_data/yolo.h5
+.vscode/*
