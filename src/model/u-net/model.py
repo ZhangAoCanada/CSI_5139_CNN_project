@@ -106,9 +106,4 @@ class Unet(object):
         self.model.summary()
 
 
-im_width = 1280
-im_height = 384
-input_img = Input((im_height, im_width, 1), name='img')
-unet = Unet()
-model = unet.get_unet(input_img)
-unet.compileModel()
+
