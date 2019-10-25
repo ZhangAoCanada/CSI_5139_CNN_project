@@ -25,10 +25,11 @@ class ConvSegNet:
         self.learning_rate = tf.train.exponential_decay(self.learning_rate_start, self.global_step, \
                                                         500, 0.96, staircase=True)
 
-    def Conv2D_BN_ReLU(self, x, filters, kernel, strides, padding):
+    def Conv2D_BN_ReLU(self, x, filters, kernel, strides, padding, if_last = False):
         x = L.Conv2D(filters, kernel, strides=strides, padding=padding)(x)
-        x = L.BatchNormalization()(x)
-        x = L.ReLU()(x)
+        if if_last:
+            x = L.BatchNormalization()(x)
+            x = L.ReLU()(x)
         # x = L.LeakyReLU(alpha = 0.1)(x)
         return x
     
@@ -68,22 +69,22 @@ class ConvSegNet:
             x = self.Conv2D_BN_ReLU(x, filters, [1,1], strides=(1,1), padding='same')
             filters = filters // 2
             x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        x = self.Conv2D_BN_ReLU(x, 1, [3,3], strides=(1,1), padding='same')
+        x = self.Conv2D_BN_ReLU(x, 1, [3,3], strides=(1,1), padding='same', if_last=True)
         return x        
 
     def ConvSegBody(self):
         x = self.FirstLayer(self.X, 32, 3)
-        # x = self.ConvIterateBlock(x, 32, 3)
-        # # x = self.ConvIterateBlock(x, 64, 3)
-        # # x = self.ConvIterateBlock(x, 128, 3)
-        # # x = self.ConvIterateBlock(x, 256, 3)
-        # # x = self.ConvIterateBlock(x, 256, 3)
+        x = self.ConvIterateBlock(x, 32, 3)
+        x = self.ConvIterateBlock(x, 64, 3)
+        # x = self.ConvIterateBlock(x, 128, 3)
+        # x = self.ConvIterateBlock(x, 256, 3)
+        # x = self.ConvIterateBlock(x, 256, 3)
 
-        # # x = self.DeConvIterateBlock(x, 256, 3)
-        # # x = self.DeConvIterateBlock(x, 256, 3)
-        # # x = self.DeConvIterateBlock(x, 128, 3)
-        # # x = self.DeConvIterateBlock(x, 64, 3)
-        # x = self.DeConvIterateBlock(x, 32, 3)
+        # x = self.DeConvIterateBlock(x, 256, 3)
+        # x = self.DeConvIterateBlock(x, 256, 3)
+        # x = self.DeConvIterateBlock(x, 128, 3)
+        x = self.DeConvIterateBlock(x, 64, 3)
+        x = self.DeConvIterateBlock(x, 32, 3)
         x = self.LastLayer(x, 32, 3)
         return x
 

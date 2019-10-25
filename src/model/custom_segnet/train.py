@@ -5,15 +5,17 @@ os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
 # import matplotlib
 # matplotlib.use("tkagg")
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
+import sys
 from glob import glob
 from PIL import Image
+sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 import cv2
 
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras.layers as L
+import keras.layers as L
 from model import ConvSegNet
 
 ###############################################################
@@ -115,12 +117,36 @@ output_dir = "../../data_processing/train_out/"
 oneimg_name = "../../data_processing/train_in/10.png"
 onegt_name = "../../data_processing/train_out/10.npy"
 oneimg, onegt = GetInputGt(oneimg_name, onegt_name, input_size_orig, scale)
+oneimg /= oneimg.max()
 print([oneimg.shape, onegt.shape])
 ###############################################################
 
 # dataGo = DataGenerator(input_dir, output_dir, input_size_orig, scale, batch_size)
 
 convsegModel = ConvSegNet(model_input_size)
+
+# model = convsegModel.ConvSegBody()
+
+# model.compile(loss='binary_crossentropy',
+#               optimizer='adam',
+#               metrics=['accuracy'])
+
+# model.fit(oneimg, onegt, epochs=200, batch_size=1)
+
+# pred = model.predict(oneimg)
+
+# fig = plt.figure()
+
+# ax1 = fig.add_subplot(311)
+# ax2 = fig.add_subplot(312)
+# ax3 = fig.add_subplot(313)
+# oneimg = np.squeeze(oneimg)
+# onegt = np.squeeze(onegt)
+# pred = np.squeeze(pred)
+# ax1.imshow(oneimg)
+# ax2.imshow(onegt)
+# ax3.imshow(pred)
+# plt.show()
 
 loss = convsegModel.RegularLoss()
 # loss = convsegModel.WeightLoss()
