@@ -5,7 +5,7 @@ os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 # import matplotlib
 # matplotlib.use("tkagg")
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 from glob import glob
 from PIL import Image
@@ -14,10 +14,10 @@ import cv2
 import numpy as np
 import tensorflow as tf
 import keras.layers as L
-import tensorflow.keras.backend as K
+import keras.backend as K
 from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau
 from keras.models import Model
-from model import ConvSegNet
+from model2 import ConvSegNet
 
 ###############################################################
 def ChangeSize(gt, input_size_orig, scale):
@@ -92,7 +92,12 @@ class DataGenerator:
         all_index = np.arange(len(self.all_imgs))
         np.random.shuffle(all_index)
         num_batches = len(all_index) // self.batch_size
-        for batch_i in range(num_batches):
+        batch_i = 0
+        while True:
+            if batch_i >= num_batches - 1:
+                batch_i = 0
+            else:
+                batch_i += 1
             batch_index = all_index[batch_i*self.batch_size: (batch_i+1)*self.batch_size]
             batch_imgs = []
             batch_labels = []
@@ -149,9 +154,9 @@ model.compile(loss=convsegModel.RegularLoss,
               metrics=[convsegModel.MetricsIOU, convsegModel.MetricsP, convsegModel.MetricsR])
 # fit data
 model.fit_generator(trainGo.GetBatchData(), 
-                    steps_per_epoch=max(1, trainGo.num_batch),
+                    steps_per_epoch=trainGo.num_batch,
                     validation_data=testGo.GetBatchData(),
-                    validation_steps=max(1, testGo.num_batch),
+                    validation_steps=testGo.num_batch,
                     epochs=500,
                     initial_epoch=0,
                     callbacks=[logging, checkpoint])
@@ -200,7 +205,7 @@ model.fit_generator(trainGo.GetBatchData(),
 # print(K.learning_phase())
 
 # with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
-#     K.set_session(sess)
+#     K.tensorflow_backend.set_session(sess)
 #     # summaries_train = 'logs/train/'
 #     # summaries_test = 'logs/test/'
 #     # train_writer = tf.summary.FileWriter(summaries_train + "original_loss", sess.graph)
