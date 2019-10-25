@@ -33,7 +33,7 @@ class ConvSegNet:
         return x
 
     def GatingConv2D(self, x, filters, kernel, strides, padding):
-        x = L.Conv2D(filters, kernel, strides=strides, padding=padding)(x)
+        x = L.Conv2D(filters, kernel, strides=strides, padding=padding, activation='sigmoid')(x)
         return x
 
     def MaxPool(self, x):
@@ -90,16 +90,11 @@ class ConvSegNet:
         x = self.LastLayer(x, 64, 1)
         return x
 
-    def SegPred(self):
-        seg_out = self.ConvSegBody()
-        seg_pred = tf.sigmoid(seg_out)
-        return seg_pred
-
     def RegularLoss(self):
-        pred = self.SegPred()
+        pred = self.ConvSegBody()
         logits = tf.reshape(pred, [-1,])
         labels = tf.reshape(self.Y, [-1,])
-        loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits)
+        loss = tf.keras.backend.binary_crossentropy(target=labels, output=logits)
         loss = tf.reduce_mean(loss)
         # loss = tf.reduce_mean(tf.square(tf.sigmoid(pred) - self.Y))
         return loss

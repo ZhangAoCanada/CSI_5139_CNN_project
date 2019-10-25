@@ -16,7 +16,7 @@ import cv2
 import numpy as np
 import tensorflow as tf
 import keras.layers as L
-from model import ConvSegNet
+from model2 import ConvSegNet
 
 ###############################################################
 def ChangeSize(gt, input_size_orig, scale):
