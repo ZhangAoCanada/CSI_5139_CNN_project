@@ -1,22 +1,23 @@
 import os
 ##### set specific gpu #####
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 # import matplotlib
 # matplotlib.use("tkagg")
 import matplotlib.pyplot as plt
 
-import sys
 from glob import glob
 from PIL import Image
-sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 import cv2
 
 import numpy as np
 import tensorflow as tf
 import keras.layers as L
-from model2 import ConvSegNet
+import tensorflow.keras.backend as K
+from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau
+from keras.models import Model
+from model import ConvSegNet
 
 ###############################################################
 def ChangeSize(gt, input_size_orig, scale):
@@ -57,6 +58,7 @@ class DataGenerator:
         self.output_dir = output_dir
         self.all_imgs = glob(input_dir + "*.png")
         self.all_labels = glob(output_dir + "*.npy")
+        self.num_batch = len(self.all_imgs) // self.batch_size
 
     def ChangeSize(self, gt):
         gt = cv2.resize(gt, (gt.shape[1]//self.scale, gt.shape[0]//self.scale))
@@ -105,13 +107,16 @@ class DataGenerator:
             yield batch_imgs, batch_labels
 
 
-batch_size = 2
+batch_size = 5
 epoches = 100
 input_size_orig = (384, 1280)
 scale = 2
 model_input_size = (input_size_orig[0]//scale, input_size_orig[1]//scale)
-input_dir = "../../data_processing/train_in/"
-output_dir = "../../data_processing/train_out/"
+train_input_dir = "../../data_processing/train_in/"
+train_output_dir = "../../data_processing/train_out/"
+test_input_dir = "../../data_processing/test_in/"
+test_output_dir = "../../data_processing/test_out/"
+log_dir = 'logs/000/'
 
 ###############################################################
 oneimg_name = "../../data_processing/train_in/10.png"
@@ -121,19 +126,39 @@ oneimg /= oneimg.max()
 print([oneimg.shape, onegt.shape])
 ###############################################################
 
-# dataGo = DataGenerator(input_dir, output_dir, input_size_orig, scale, batch_size)
+trainGo = DataGenerator(train_input_dir, train_output_dir, input_size_orig, scale, batch_size)
+testGo = DataGenerator(test_input_dir, test_output_dir, input_size_orig, scale, batch_size)
 
+# GPU memory management
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+K.tensorflow_backend.set_session(tf.Session(config=config))
+# build the model
 convsegModel = ConvSegNet(model_input_size)
-
-# model = convsegModel.ConvSegBody()
-
-# model.compile(loss='binary_crossentropy',
-#               optimizer='adam',
-#               metrics=['accuracy'])
-
-# model.fit(oneimg, onegt, epochs=200, batch_size=1)
+model = convsegModel.ConvSegBody()
+# set tensorboard
+logging = TensorBoard(log_dir=log_dir)
+# set check point
+checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}.h5',
+            monitor='loss', save_weights_only=True, save_best_only=True, period=3)
+# set learning rate reduce
+reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.1, patience=3, verbose=1)
+# get all necessary loss and performances
+model.compile(loss=convsegModel.RegularLoss,
+              optimizer='adam',
+              metrics=[convsegModel.MetricsIOU, convsegModel.MetricsP, convsegModel.MetricsR])
+# fit data
+model.fit_generator(trainGo.GetBatchData(), 
+                    steps_per_epoch=max(1, trainGo.num_batch),
+                    validation_data=testGo.GetBatchData(),
+                    validation_steps=max(1, testGo.num_batch),
+                    epochs=500,
+                    initial_epoch=0,
+                    callbacks=[logging, checkpoint])
 
 # pred = model.predict(oneimg)
+# pred1 = pred > 0.5
+# pred1 = pred1.astype(np.float32)
 
 # fig = plt.figure()
 
@@ -143,50 +168,54 @@ convsegModel = ConvSegNet(model_input_size)
 # oneimg = np.squeeze(oneimg)
 # onegt = np.squeeze(onegt)
 # pred = np.squeeze(pred)
+# pred1 = np.squeeze(pred1)
 # ax1.imshow(oneimg)
-# ax2.imshow(onegt)
-# ax3.imshow(pred)
+# ax2.imshow(pred)
+# ax3.imshow(pred1)
 # plt.show()
 
-loss = convsegModel.RegularLoss()
-# loss = convsegModel.WeightLoss()
-# loss = convsegModel.IoULoss()
 
-training = convsegModel.Optimization()
-# overall, precision, recall = convsegModel.Metrics()
+# convsegModel = ConvSegNet(model_input_size)
 
-# summary_loss = tf.summary.scalar("loss", loss)
-# streaming_overall, streaming_overall_update = tf.contrib.metrics.streaming_mean(overall)
-# streaming_precision, streaming_precision_update = tf.contrib.metrics.streaming_mean(precision)
-# streaming_recall, streaming_recall_update = tf.contrib.metrics.streaming_mean(recall)
-# summary_overall = tf.summary.scalar("iou", streaming_overall)
-# summary_precision = tf.summary.scalar("precision", streaming_precision)
-# summary_recall = tf.summary.scalar("recall", streaming_recall)
+# loss = convsegModel.RegularLoss()
+# # loss = convsegModel.WeightLoss()
+# # loss = convsegModel.IoULoss()
 
-# initialization
-init = tf.global_variables_initializer()
+# training = convsegModel.Optimization()
+# # overall, precision, recall = convsegModel.Metrics()
 
-# GPU settings
-gpu_options = tf.GPUOptions(allow_growth=True)
+# # summary_loss = tf.summary.scalar("loss", loss)
+# # streaming_overall, streaming_overall_update = tf.contrib.metrics.streaming_mean(overall)
+# # streaming_precision, streaming_precision_update = tf.contrib.metrics.streaming_mean(precision)
+# # streaming_recall, streaming_recall_update = tf.contrib.metrics.streaming_mean(recall)
+# # summary_overall = tf.summary.scalar("iou", streaming_overall)
+# # summary_precision = tf.summary.scalar("precision", streaming_precision)
+# # summary_recall = tf.summary.scalar("recall", streaming_recall)
 
-with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
-    tf.keras.backend.set_session(sess)
-    # summaries_train = 'logs/train/'
-    # summaries_test = 'logs/test/'
-    # train_writer = tf.summary.FileWriter(summaries_train + "original_loss", sess.graph)
-    # test_writer = tf.summary.FileWriter(summaries_test + "original_loss", sess.graph)
-    sess.run(init)
-    for i in range(1000):
-        sess.run(training, feed_dict = {convsegModel.X: oneimg,
-                                        convsegModel.Y: onegt})
-        l = sess.run(loss, \
-                                feed_dict = {convsegModel.X: oneimg,
-                                            convsegModel.Y: onegt})
-        print("-------------------------------")
-        print("loss:", l)
-    # for batch_imgs, batch_gts in dataGo.GetBatchData():
-    #     test1 = sess.run(overall, feed_dict = {convsegModel.X: batch_imgs,
-    #                                         convsegModel.Y: batch_gts})
+# # initialization
+# init = tf.global_variables_initializer()
+
+# # GPU settings
+# gpu_options = tf.GPUOptions(allow_growth=True)
+# print(K.learning_phase())
+
+# with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
+#     K.set_session(sess)
+#     # summaries_train = 'logs/train/'
+#     # summaries_test = 'logs/test/'
+#     # train_writer = tf.summary.FileWriter(summaries_train + "original_loss", sess.graph)
+#     # test_writer = tf.summary.FileWriter(summaries_test + "original_loss", sess.graph)
+#     sess.run(init)
+#     with sess.as_default():
+#         for i in range(1000):
+#             l, _ = sess.run([loss, training], feed_dict = {convsegModel.X: oneimg,
+#                                                             convsegModel.Y: onegt,})
+#                                                             # K.learning_phase(): 1})
+#             print("-------------------------------")
+#             print("loss:", l)
+#     # for batch_imgs, batch_gts in dataGo.GetBatchData():
+#     #     test1 = sess.run(overall, feed_dict = {convsegModel.X: batch_imgs,
+#     #                                         convsegModel.Y: batch_gts})
 
 
 

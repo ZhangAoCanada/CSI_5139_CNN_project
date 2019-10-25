@@ -6,9 +6,13 @@ os.environ["CUDA_VISIBLE_DEVICES"]="0"
 import tensorflow as tf
 import tensorflow.keras.layers as L
 from tensorflow.keras import Model
+import tensorflow.keras.backend as K
 from tensorflow.keras.backend import binary_crossentropy
-import tensorflow.nn as N
+from keras.objectives import binary_crossentropy
 import numpy as np
+
+sess = tf.Session()
+K.set_session(sess)
 
 class ConvSegNet:
     def __init__(self, input_size, ):
@@ -27,9 +31,8 @@ class ConvSegNet:
 
     def Conv2D_BN_ReLU(self, x, filters, kernel, strides, padding, if_last = False):
         x = L.Conv2D(filters, kernel, strides=strides, padding=padding)(x)
-        if if_last:
-            x = L.BatchNormalization()(x)
-            x = L.ReLU()(x)
+        x = L.BatchNormalization()(x)
+        x = L.ReLU()(x)
         # x = L.LeakyReLU(alpha = 0.1)(x)
         return x
     
@@ -69,7 +72,7 @@ class ConvSegNet:
             x = self.Conv2D_BN_ReLU(x, filters, [1,1], strides=(1,1), padding='same')
             filters = filters // 2
             x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        x = self.Conv2D_BN_ReLU(x, 1, [3,3], strides=(1,1), padding='same', if_last=True)
+        x = L.Conv2D(1, [3,3], strides=(1,1), padding='same', activation='sigmoid')(x)
         return x        
 
     def ConvSegBody(self):
@@ -94,10 +97,11 @@ class ConvSegNet:
         return seg_pred
 
     def RegularLoss(self):
-        pred = self.SegPred()
+        pred = self.ConvSegBody()
+        # pred = tf.sigmoid(pred)
         logits = tf.reshape(pred, [-1,])
         labels = tf.reshape(self.Y, [-1,])
-        loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits)
+        loss = binary_crossentropy(labels, logits)
         loss = tf.reduce_mean(loss)
         # loss = tf.reduce_mean(tf.square(tf.sigmoid(pred) - self.Y))
         return loss
