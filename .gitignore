@@ -2,7 +2,6 @@ src/model/yolo_keras_customized_output/yolov3.weights
 src/model/yolo_keras_customized_output/model_data/yolo.h5
 src/model/GANet_customized_output/checkpoint/kitti2015_final.pth
 src/model/GANet_customized_output/checkpoint/kitti2012_final.pth
-<<<<<<< HEAD
 src/model/mrcnn/mask_rcnn_coco.h5
-=======
->>>>>>> 66faa1695daff4d5f4837446e011851c919a9e43
+src/model/custom_segnet/logs
+

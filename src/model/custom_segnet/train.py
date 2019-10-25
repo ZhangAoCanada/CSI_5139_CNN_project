@@ -112,7 +112,7 @@ class DataGenerator:
             yield batch_imgs, batch_labels
 
 
-batch_size = 5
+batch_size = 2
 epoches = 100
 input_size_orig = (384, 1280)
 scale = 2
@@ -142,7 +142,7 @@ K.tensorflow_backend.set_session(tf.Session(config=config))
 convsegModel = ConvSegNet(model_input_size)
 model = convsegModel.ConvSegBody()
 # set tensorboard
-logging = TensorBoard(log_dir=log_dir)
+logging = TensorBoard(log_dir=log_dir, update_freq='batch')
 # set check point
 checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}.h5',
             monitor='loss', save_weights_only=True, save_best_only=True, period=3)
