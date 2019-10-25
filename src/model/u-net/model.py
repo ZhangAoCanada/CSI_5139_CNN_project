@@ -80,14 +80,14 @@ class Unet(object):
         u7 = concatenate([u7, c3])
         # u7 = Dropout(dropout)(u7)
         c7 = self.conv2d_block(u7, n_filters *
-                               8,  kernel_size=3, BN=BN)
+                               4,  kernel_size=3, BN=BN)
 
         u8 = Conv2DTranspose(n_filters*2, (3, 3),
                              strides=(2, 2), padding='same')(c7)
         u8 = concatenate([u8, c2])
         u8 = Dropout(dropout)(u8)
         c8 = self.conv2d_block(u8, n_filters *
-                               8,  kernel_size=3, BN=BN)
+                               2,  kernel_size=3, BN=BN)
 
         u9 = Conv2DTranspose(n_filters*1, (3, 3),
                              strides=(2, 2), padding='same')(c8)
@@ -103,7 +103,4 @@ class Unet(object):
     def compileModel(self):
         self.model.compile(optimizer=Adam(), loss="binary_crossentropy",
                            metrics=["accuracy"])
-        self.model.summary()
-
-
-
+        self.model.summary() 
