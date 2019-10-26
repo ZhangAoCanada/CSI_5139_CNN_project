@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from tensorflow.keras.metrics import Recall, Precision, MeanIoU
 from skimage.io import concatenate_images, imread, imshow
 from skimage.morphology import label
 from skimage.transform import resize
@@ -102,5 +103,5 @@ class Unet(object):
 
     def compileModel(self):
         self.model.compile(optimizer=Adam(), loss="binary_crossentropy",
-                           metrics=["accuracy"])
+                           metrics=["accuracy",MeanIoU(num_classes=2),Precision(),Recall()])
         self.model.summary()

@@ -108,7 +108,7 @@ unet.compileModel()
 
 log_dir = "./logs_00"
 callbacks = [
-    EarlyStopping(patience=10, verbose=1),
+    EarlyStopping(patience=5, verbose=1),
     ReduceLROnPlateau(factor=0.1, patience=3, min_lr=0.00001, verbose=1),
     ModelCheckpoint('model-tgs-salt.h5', verbose=1, save_best_only=True, save_weights_only=True),
     TensorBoard(log_dir=log_dir, update_freq='batch')
