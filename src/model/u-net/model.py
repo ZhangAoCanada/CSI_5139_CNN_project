@@ -50,7 +50,7 @@ class Unet(object):
         x = Activation("relu")(x)
         return x
 
-    def get_unet(self, input_img, n_filters=12, dropout=0.5, BN=True):
+    def get_unet(self, input_img, n_filters=16, dropout=0.5, BN=True):
         c1 = self.conv2d_block(input_img, n_filters*1, kernel_size=3, BN=BN)
         p1 = MaxPooling2D((2, 2))(c1)
         # p1 = Dropout(dropout)(p1)
