@@ -110,7 +110,7 @@ class DataGenerator:
             yield batch_imgs, batch_labels
 
 if __name__ == "__main__":
-    batch_size = 2
+    batch_size = 3
     epoches = 100
     input_size_orig = (384, 1280)
     scale = 2
