@@ -21,18 +21,37 @@ class ConvSegNet:
         self.X = L.Input(shape = (self.w, self.h, 1))
 
     def Conv2D_BN_ReLU(self, x, filters, kernel, strides, padding, if_last = False):
-        x = L.Conv2D(filters, kernel, strides=strides, padding=padding)(x)
+        # kernel_regularizer = R.l2(5e-4)
+        # bias_regularizer = R.l2(5e-4)
+        kernel_regularizer = None
+        bias_regularizer = None
+        x = L.Conv2D(filters, kernel, strides=strides, padding=padding, \
+                    kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer)(x)
         x = L.BatchNormalization()(x)
         x = L.ReLU()(x)
         # x = L.LeakyReLU(alpha = 0.1)(x)
         return x
     
     def DeConv2D_BN_ReLU(self, x, filters, kernel, strides, padding):
-        x = L.Conv2DTranspose(filters, kernel, strides=strides, padding=padding)(x)
+        # kernel_regularizer = R.l2(5e-4)
+        # bias_regularizer = R.l2(5e-4)
+        kernel_regularizer = None
+        bias_regularizer = None
+        x = L.Conv2DTranspose(filters, kernel, strides=strides, padding=padding, \
+                    kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer)(x)
         x = L.BatchNormalization()(x)
         x = L.ReLU()(x)
         # x = L.LeakyReLU(alpha = 0.1)(x)
         return x        
+
+    def GatingConv2D(self, x, filters, kernel, strides, padding):
+        kernel_regularizer = R.l2(5e-4)
+        bias_regularizer = R.l2(5e-4)
+        # kernel_regularizer = None
+        # bias_regularizer = None
+        x = L.Conv2D(filters, kernel, strides=strides, padding=padding, activation='sigmoid', \
+                    kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer)(x)
+        return x
     
     def ConvIterateBlock(self, x, filters, num_iteration):
         x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(2,2), padding='same')
@@ -63,8 +82,8 @@ class ConvSegNet:
             x = self.Conv2D_BN_ReLU(x, filters, [1,1], strides=(1,1), padding='same')
             filters = filters // 2
             x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        x = L.Conv2D(1, [3,3], strides=(1,1), padding='same', activation='sigmoid')(x)
-        return x        
+        x = self.GatingConv2D(x, 1, [3,3], strides=(1,1), padding='same')
+        return x
 
     def ConvSegBody(self):
         x = self.FirstLayer(self.X, 32, 3)

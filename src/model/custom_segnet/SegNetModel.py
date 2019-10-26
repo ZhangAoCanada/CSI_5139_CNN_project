@@ -7,6 +7,7 @@ import tensorflow as tf
 import keras.layers as L
 import keras.backend as K
 import keras.metrics as M
+import keras.regularizers as R
 from keras.models import Model
 import numpy as np
 
@@ -21,13 +22,23 @@ class SegNet:
         self.X = L.Input(shape = (self.w, self.h, 1))
 
     def Conv2D_BN_ReLU(self, x, filters, kernel, strides, padding):
-        x = L.Conv2D(filters, kernel, strides=strides, padding=padding)(x)
+        kernel_regularizer = R.l2(5e-4)
+        bias_regularizer = R.l2(5e-4)
+        # kernel_regularizer = None
+        # bias_regularizer = None
+        x = L.Conv2D(filters, kernel, strides=strides, padding=padding, \
+                    kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer)(x)
         x = L.BatchNormalization()(x)
         x = L.ReLU()(x)
         return x
 
     def GatingConv2D(self, x, filters, kernel, strides, padding):
-        x = L.Conv2D(filters, kernel, strides=strides, padding=padding, activation='sigmoid')(x)
+        kernel_regularizer = R.l2(5e-4)
+        bias_regularizer = R.l2(5e-4)
+        # kernel_regularizer = None
+        # bias_regularizer = None
+        x = L.Conv2D(filters, kernel, strides=strides, padding=padding, activation='sigmoid', \
+                    kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer)(x)
         return x
 
     def MaxPool(self, x):
