@@ -103,4 +103,4 @@ class Unet(object):
     def compileModel(self):
         self.model.compile(optimizer=Adam(), loss="binary_crossentropy",
                            metrics=["accuracy"])
-        self.model.summary() 
+        self.model.summary()
