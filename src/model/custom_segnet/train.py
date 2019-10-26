@@ -3,10 +3,6 @@ import os
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
-# import matplotlib
-# matplotlib.use("tkagg")
-# import matplotlib.pyplot as plt
-
 from glob import glob
 from PIL import Image
 import cv2
@@ -17,7 +13,8 @@ import keras.layers as L
 import keras.backend as K
 from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau
 from keras.models import Model
-from model2 import ConvSegNet
+from SegNetModel import SegNet
+# from ConvSegModel import ConvSegNet
 
 ###############################################################
 def ChangeSize(gt, input_size_orig, scale):
@@ -44,6 +41,7 @@ def GetInputGt(img_name, gt_name, input_size_orig, scale):
 
     img = np.array(Image.open(img_name)).astype(np.float32)
     img = ChangeSize(img, input_size_orig, scale)
+    img = img / img.max()
     img = np.expand_dims(img, axis = -1)
     img = np.expand_dims(img, axis = 0)
     return img, gt
@@ -111,55 +109,60 @@ class DataGenerator:
             batch_labels = np.concatenate(batch_labels, axis = 0)
             yield batch_imgs, batch_labels
 
+if __name__ == "__main__":
+    batch_size = 5
+    epoches = 100
+    input_size_orig = (384, 1280)
+    scale = 2
+    model_input_size = (input_size_orig[0]//scale, input_size_orig[1]//scale)
+    train_input_dir = "../../data_processing/train_in/"
+    train_output_dir = "../../data_processing/train_out/"
+    test_input_dir = "../../data_processing/test_in/"
+    test_output_dir = "../../data_processing/test_out/"
+    log_dir = 'logs/000/'
 
-batch_size = 2
-epoches = 100
-input_size_orig = (384, 1280)
-scale = 2
-model_input_size = (input_size_orig[0]//scale, input_size_orig[1]//scale)
-train_input_dir = "../../data_processing/train_in/"
-train_output_dir = "../../data_processing/train_out/"
-test_input_dir = "../../data_processing/test_in/"
-test_output_dir = "../../data_processing/test_out/"
-log_dir = 'logs/000/'
+    ###############################################################
+    oneimg_name = "../../data_processing/train_in/10.png"
+    onegt_name = "../../data_processing/train_out/10.npy"
+    oneimg, onegt = GetInputGt(oneimg_name, onegt_name, input_size_orig, scale)
+    oneimg /= oneimg.max()
+    print([oneimg.shape, onegt.shape])
+    ###############################################################
 
-###############################################################
-oneimg_name = "../../data_processing/train_in/10.png"
-onegt_name = "../../data_processing/train_out/10.npy"
-oneimg, onegt = GetInputGt(oneimg_name, onegt_name, input_size_orig, scale)
-oneimg /= oneimg.max()
-print([oneimg.shape, onegt.shape])
-###############################################################
+    trainGo = DataGenerator(train_input_dir, train_output_dir, input_size_orig, scale, batch_size)
+    testGo = DataGenerator(test_input_dir, test_output_dir, input_size_orig, scale, batch_size)
 
-trainGo = DataGenerator(train_input_dir, train_output_dir, input_size_orig, scale, batch_size)
-testGo = DataGenerator(test_input_dir, test_output_dir, input_size_orig, scale, batch_size)
+    # GPU memory management
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    K.tensorflow_backend.set_session(tf.Session(config=config))
+    # build the model
+    ############################################################
+    convsegModel = SegNet(model_input_size)
+    # convsegModel = ConvSegNet(model_input_size)
+    ############################################################
+    model = convsegModel.ConvSegBody()
+    # set tensorboard
+    logging = TensorBoard(log_dir=log_dir, update_freq='batch')
+    # set check point
+    checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}.h5',
+                monitor='val_loss', save_weights_only=True, save_best_only=True, period=3)
+    # set learning rate reduce
+    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=1)
+    # get all necessary loss and performances
+    model.compile(loss=convsegModel.RegularLoss,
+                optimizer='adam',
+                metrics=[convsegModel.MetricsIOU, convsegModel.MetricsP, convsegModel.MetricsR])
+    # fit data
+    model.fit_generator(trainGo.GetBatchData(), 
+                        steps_per_epoch=trainGo.num_batch,
+                        validation_data=testGo.GetBatchData(),
+                        validation_steps=testGo.num_batch,
+                        epochs=500,
+                        initial_epoch=0,
+                        callbacks=[logging, reduce_lr, checkpoint])
 
-# GPU memory management
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True
-K.tensorflow_backend.set_session(tf.Session(config=config))
-# build the model
-convsegModel = ConvSegNet(model_input_size)
-model = convsegModel.ConvSegBody()
-# set tensorboard
-logging = TensorBoard(log_dir=log_dir, update_freq='batch')
-# set check point
-checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}.h5',
-            monitor='loss', save_weights_only=True, save_best_only=True, period=3)
-# set learning rate reduce
-reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.1, patience=3, verbose=1)
-# get all necessary loss and performances
-model.compile(loss=convsegModel.RegularLoss,
-              optimizer='adam',
-              metrics=[convsegModel.MetricsIOU, convsegModel.MetricsP, convsegModel.MetricsR])
-# fit data
-model.fit_generator(trainGo.GetBatchData(), 
-                    steps_per_epoch=trainGo.num_batch,
-                    validation_data=testGo.GetBatchData(),
-                    validation_steps=testGo.num_batch,
-                    epochs=500,
-                    initial_epoch=0,
-                    callbacks=[logging, checkpoint])
+    model.save_weights(log_dir + 'trained_weights_stage_1.h5')
 
 # pred = model.predict(oneimg)
 # pred1 = pred > 0.5
@@ -221,36 +224,3 @@ model.fit_generator(trainGo.GetBatchData(),
 #     # for batch_imgs, batch_gts in dataGo.GetBatchData():
 #     #     test1 = sess.run(overall, feed_dict = {convsegModel.X: batch_imgs,
 #     #                                         convsegModel.Y: batch_gts})
-
-
-
-
-###############################################################
-# fig = plt.figure()
-# ax1 = fig.add_subplot(211)
-# ax2 = fig.add_subplot(212)
-# ax1.imshow(oneimg[0, :, :, 0])
-# ax2.imshow(onegt[0, :, :, 0])
-# plt.show()
-###############################################################
-
-
-###############################################################
-# plt.ion()
-# fig = plt.figure()
-# ax1 = fig.add_subplot(211)
-# ax2 = fig.add_subplot(212)
-# for i in range(len(all_ims)):
-#     img = np.array(Image.open("../../data_processing/train_in/" + str(i) + ".png")).astype(np.float32)
-#     img = ChangeSize(img, input_size_orig, scale)
-#     gt = np.load("../../data_processing/train_out/" + str(i) + ".npy")
-#     gt = ChangeSize(gt, input_size_orig, scale)
-
-#     plt.cla()
-#     ax1.clear()
-#     ax1.imshow(img)
-#     ax2.clear()
-#     ax2.imshow(gt)
-#     fig.canvas.draw()
-#     plt.pause(0.3)
-###############################################################

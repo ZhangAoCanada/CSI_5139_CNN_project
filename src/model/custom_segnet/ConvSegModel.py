@@ -20,70 +20,68 @@ class ConvSegNet:
             raise ValueError("Wrong image input size, the width and height should be even numbers.")
         self.X = L.Input(shape = (self.w, self.h, 1))
 
-    def Conv2D_BN_ReLU(self, x, filters, kernel, strides, padding):
+    def Conv2D_BN_ReLU(self, x, filters, kernel, strides, padding, if_last = False):
         x = L.Conv2D(filters, kernel, strides=strides, padding=padding)(x)
         x = L.BatchNormalization()(x)
         x = L.ReLU()(x)
-        return x
-
-    def GatingConv2D(self, x, filters, kernel, strides, padding):
-        x = L.Conv2D(filters, kernel, strides=strides, padding=padding, activation='sigmoid')(x)
-        return x
-
-    def MaxPool(self, x):
-        x = L.MaxPooling2D()(x)
-        return x
-
-    def UpSampling(self, x):
-        x = L.UpSampling2D()(x)
-        return x      
-
-    def EncodeTwoBlock(self, x, filters):
-        x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        x = self.MaxPool(x)
+        # x = L.LeakyReLU(alpha = 0.1)(x)
         return x
     
-    def EncodeThreeBlock(self, x, filters):
+    def DeConv2D_BN_ReLU(self, x, filters, kernel, strides, padding):
+        x = L.Conv2DTranspose(filters, kernel, strides=strides, padding=padding)(x)
+        x = L.BatchNormalization()(x)
+        x = L.ReLU()(x)
+        # x = L.LeakyReLU(alpha = 0.1)(x)
+        return x        
+    
+    def ConvIterateBlock(self, x, filters, num_iteration):
+        x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(2,2), padding='same')
         x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        x = self.MaxPool(x)
+        for i in range(num_iteration):
+            x = self.Conv2D_BN_ReLU(x, filters, [1,1], strides=(1,1), padding='same')
+            x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
         return x
 
-    def DecodeThreeBlock(self, x ,filters, final_filters):
-        x = self.UpSampling(x)
+    def DeConvIterateBlock(self, x, filters, num_iteration):
         x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        x = self.Conv2D_BN_ReLU(x, final_filters, [3,3], strides=(1,1), padding='same')
+        for i in range(num_iteration):
+            x = self.Conv2D_BN_ReLU(x, filters, [1,1], strides=(1,1), padding='same')
+            x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
+        x = self.DeConv2D_BN_ReLU(x, filters, [3,3], strides=(2,2), padding='same')
         return x
 
-    def DecodeTwoBlock(self, x ,filters, final_filters):
-        x = self.UpSampling(x)
+    def FirstLayer(self, x, filters, num_iteration):
         x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        x = self.Conv2D_BN_ReLU(x, final_filters, [3,3], strides=(1,1), padding='same')
+        for i in range(num_iteration):
+            x = self.Conv2D_BN_ReLU(x, filters, [1,1], strides=(1,1), padding='same')
+            x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
         return x
     
-    def LastLayer(self, x ,filters, final_filters):
-        x = self.UpSampling(x)
+    def LastLayer(self, x, filters, num_iteration):
         x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        x = self.GatingConv2D(x, final_filters, [1,1], strides=(1,1), padding='same')
-        return x
+        for i in range(num_iteration):
+            x = self.Conv2D_BN_ReLU(x, filters, [1,1], strides=(1,1), padding='same')
+            filters = filters // 2
+            x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
+        x = L.Conv2D(1, [3,3], strides=(1,1), padding='same', activation='sigmoid')(x)
+        return x        
 
     def ConvSegBody(self):
-        x = self.EncodeTwoBlock(self.X, 64)
-        x = self.EncodeTwoBlock(x, 128)
-        x = self.EncodeThreeBlock(x, 256)
-        x = self.EncodeThreeBlock(x, 512)
-        x = self.EncodeThreeBlock(x, 512)
+        x = self.FirstLayer(self.X, 32, 3)
+        x = self.ConvIterateBlock(x, 32, 3)
+        x = self.ConvIterateBlock(x, 64, 3)
+        x = self.ConvIterateBlock(x, 128, 3)
+        x = self.ConvIterateBlock(x, 256, 3)
+        x = self.ConvIterateBlock(x, 256, 3)
 
-        x = self.DecodeThreeBlock(x, 512, 512)
-        x = self.DecodeThreeBlock(x, 512, 256)
-        x = self.DecodeThreeBlock(x, 256, 128)
-        x = self.DecodeTwoBlock(x, 128, 64)
-        x = self.LastLayer(x, 64, 1)
+        x = self.DeConvIterateBlock(x, 256, 3)
+        x = self.DeConvIterateBlock(x, 256, 3)
+        x = self.DeConvIterateBlock(x, 128, 3)
+        x = self.DeConvIterateBlock(x, 64, 3)
+        x = self.DeConvIterateBlock(x, 32, 3)
+        x = self.LastLayer(x, 32, 3)
         return Model(self.X, x)
-
+    
     def RegularLoss(self, y_ture, y_pred):
         logits = K.reshape(y_pred, [-1,])
         labels = K.reshape(y_ture, [-1,])
@@ -128,8 +126,3 @@ class ConvSegNet:
         overall_iou, precision, recall = self.MaskIoU(y_pred_mask, y_ture)
         return recall
     
-
-
-
-        
-
