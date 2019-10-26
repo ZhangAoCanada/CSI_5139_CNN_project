@@ -56,11 +56,11 @@ class Unet(object):
 
         c2 = self.conv2d_block(p1, n_filters*2, kernel_size=3, BN=BN)
         p2 = MaxPooling2D((2, 2))(c2)
-        p2 = Dropout(dropout)(p2)
+        # p2 = Dropout(dropout)(p2)
 
         c3 = self.conv2d_block(p2, n_filters*4, kernel_size=3, BN=BN)
         p3 = MaxPooling2D((2, 2))(c3)
-        p3 = Dropout(dropout)(p3)
+        # p3 = Dropout(dropout)(p3)
 
         c4 = self.conv2d_block(p3, n_filters*8, kernel_size=3, BN=BN)
         p4 = MaxPooling2D((2, 2))(c4)
@@ -71,7 +71,7 @@ class Unet(object):
         u6 = Conv2DTranspose(n_filters*8, (3, 3),
                              strides=(2, 2), padding='same')(c5)
         u6 = concatenate([u6, c4])
-        u6 = Dropout(dropout)(u6)
+        # u6 = Dropout(dropout)(u6)
         c6 = self.conv2d_block(u6, n_filters *
                                8,  kernel_size=3, BN=BN)
 
@@ -85,7 +85,7 @@ class Unet(object):
         u8 = Conv2DTranspose(n_filters*2, (3, 3),
                              strides=(2, 2), padding='same')(c7)
         u8 = concatenate([u8, c2])
-        u8 = Dropout(dropout)(u8)
+        # u8 = Dropout(dropout)(u8)
         c8 = self.conv2d_block(u8, n_filters *
                                2,  kernel_size=3, BN=BN)
 

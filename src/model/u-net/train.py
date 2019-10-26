@@ -12,7 +12,7 @@ from skimage.morphology import label
 from skimage.transform import resize
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import (EarlyStopping, ModelCheckpoint,
-                                        ReduceLROnPlateau)
+                                        ReduceLROnPlateau, TensorBoard)
 from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
                                      Conv2DTranspose, Dense, Dropout,
                                      GlobalMaxPool2D, Input, Lambda,
@@ -79,6 +79,7 @@ print("Img's shape={}\t Gt's shaple={}".format(
 
 # Test padding IMG and Masks
 #######################################################
+
 # Select random index from trainning set.
 ix = random.randint(0, len(img_list))
 has_mask = gt_list[ix].max() > 0
@@ -96,19 +97,22 @@ show()
 
 # Split training data into valid and train sets
 X_train, X_valid, y_train, y_valid = train_test_split(img_list, gt_list, test_size=0.15, random_state = 2019 )
-
 print("X_train: {}\ty_train: {}\tX_valid: {}\ty_valid: {}\t".format(X_train.shape, y_train.shape , X_valid.shape, y_valid.shape))
+
 im_width = 1280
 im_height = 384
 input_img = Input((im_height, im_width, 1), name='img')
 unet = Unet()
 model = unet.get_unet(input_img)
 unet.compileModel()
+
+log_dir = "./logs_00"
 callbacks = [
     EarlyStopping(patience=10, verbose=1),
     ReduceLROnPlateau(factor=0.1, patience=3, min_lr=0.00001, verbose=1),
-    ModelCheckpoint('model-tgs-salt.h5', verbose=1, save_best_only=True, save_weights_only=True)
+    ModelCheckpoint('model-tgs-salt.h5', verbose=1, save_best_only=True, save_weights_only=True),
+    TensorBoard(log_dir=log_dir, update_freq='batch')
 ]
 
-results = model.fit(X_train, y_train, batch_size=32, epochs=3, callbacks=callbacks,
+results = model.fit(X_train, y_train, batch_size=32, epochs=100, callbacks=callbacks,
                     validation_data=(X_valid, y_valid))
