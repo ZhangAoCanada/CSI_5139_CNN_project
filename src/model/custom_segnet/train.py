@@ -110,7 +110,7 @@ class DataGenerator:
             yield batch_imgs, batch_labels
 
 if __name__ == "__main__":
-    batch_size = 5
+    batch_size = 2
     epoches = 100
     input_size_orig = (384, 1280)
     scale = 2
@@ -146,9 +146,9 @@ if __name__ == "__main__":
     logging = TensorBoard(log_dir=log_dir, update_freq='batch')
     # set check point
     checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}.h5',
-                monitor='val_loss', save_weights_only=True, save_best_only=True, period=3)
+                monitor='loss', save_weights_only=False, save_best_only=True, period=3)
     # set learning rate reduce
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=1)
+    reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.9, patience=3, min_lr=0.0001)
     # get all necessary loss and performances
     model.compile(loss=convsegModel.RegularLoss,
                 optimizer='adam',
