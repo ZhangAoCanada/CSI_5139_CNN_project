@@ -1,7 +1,7 @@
 import os
 ##### set specific gpu #####
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
 from glob import glob
 from PIL import Image
@@ -14,7 +14,7 @@ import keras.backend as K
 from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau
 from keras.models import Model
 from SegNetModel import SegNet
-# from ConvSegModel import ConvSegNet
+from ConvSegModel import ConvSegNet
 
 ###############################################################
 def ChangeSize(gt, input_size_orig, scale):
@@ -109,9 +109,78 @@ class DataGenerator:
             batch_labels = np.concatenate(batch_labels, axis = 0)
             yield batch_imgs, batch_labels
 
-if __name__ == "__main__":
-    batch_size = 2
-    epoches = 100
+
+def debug(model_name, loss_name):
+    import matplotlib
+    matplotlib.use("tkagg")
+    import matplotlib.pyplot as plt
+
+    batch_size = 5
+    epoches = 2000
+    input_size_orig = (384, 1280)
+    scale = 2
+    model_input_size = (input_size_orig[0]//scale, input_size_orig[1]//scale)
+
+    oneimg_name = "../../data_processing/train_in/10.png"
+    onegt_name = "../../data_processing/train_out/10.npy"
+    oneimg, onegt = GetInputGt(oneimg_name, onegt_name, input_size_orig, scale)
+    oneimg /= oneimg.max()
+    print([oneimg.shape, onegt.shape])
+
+    # GPU memory management
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    K.tensorflow_backend.set_session(tf.Session(config=config))
+
+    # build the model
+    if model_name == "segnet":
+        customModel = SegNet(model_input_size)
+        model = customModel.SegBody()
+    elif model_name == "convsegnet":
+        customModel = ConvSegNet(model_input_size)
+        model = customModel.ConvSegBody()
+    else:
+        raise ValueError("wrong model name input.")
+
+    # choose loss function to compile model
+    if loss_name == "regular":
+        model.compile(loss=customModel.RegularLoss,
+                optimizer='adam',
+                metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
+    elif loss_name == "dice":
+        model.compile(loss=customModel.DiceLoss,
+                optimizer='adam',
+                metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
+    elif loss_name == "weighted":
+        model.compile(loss=customModel.WeightedLoss,
+                optimizer='adam',
+                metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
+    else:
+        raise ValueError("wrong loss name input.")
+
+    model.fit(oneimg, onegt, epochs=500, initial_epoch=0)
+
+    pred = model.predict(oneimg)
+    pred1 = pred > 0.5
+    pred1 = pred1.astype(np.float32)
+
+    fig = plt.figure()
+
+    ax1 = fig.add_subplot(311)
+    ax2 = fig.add_subplot(312)
+    ax3 = fig.add_subplot(313)
+    oneimg = np.squeeze(oneimg)
+    onegt = np.squeeze(onegt)
+    pred = np.squeeze(pred)
+    pred1 = np.squeeze(pred1)
+    ax1.imshow(oneimg)
+    ax2.imshow(onegt)
+    ax3.imshow(pred1)
+    plt.show()
+
+def main(model_name, loss_name):
+    batch_size = 5
+    epoches = 2000
     input_size_orig = (384, 1280)
     scale = 2
     model_input_size = (input_size_orig[0]//scale, input_size_orig[1]//scale)
@@ -119,16 +188,9 @@ if __name__ == "__main__":
     train_output_dir = "../../data_processing/train_out/"
     test_input_dir = "../../data_processing/test_in/"
     test_output_dir = "../../data_processing/test_out/"
-    log_dir = 'logs/000/'
+    log_dir = 'logs/' + model_name + '_' + loss_name + "/"
 
-    ###############################################################
-    oneimg_name = "../../data_processing/train_in/10.png"
-    onegt_name = "../../data_processing/train_out/10.npy"
-    oneimg, onegt = GetInputGt(oneimg_name, onegt_name, input_size_orig, scale)
-    oneimg /= oneimg.max()
-    print([oneimg.shape, onegt.shape])
-    ###############################################################
-
+    # create data generator
     trainGo = DataGenerator(train_input_dir, train_output_dir, input_size_orig, scale, batch_size)
     testGo = DataGenerator(test_input_dir, test_output_dir, input_size_orig, scale, batch_size)
 
@@ -136,12 +198,17 @@ if __name__ == "__main__":
     config = tf.ConfigProto()
     config.gpu_options.allow_growth = True
     K.tensorflow_backend.set_session(tf.Session(config=config))
+
     # build the model
-    ############################################################
-    convsegModel = SegNet(model_input_size)
-    # convsegModel = ConvSegNet(model_input_size)
-    ############################################################
-    model = convsegModel.ConvSegBody()
+    if model_name == "segnet":
+        customModel = SegNet(model_input_size)
+        model = customModel.SegBody()
+    elif model_name == "convsegnet":
+        customModel = ConvSegNet(model_input_size)
+        model = customModel.ConvSegBody()
+    else:
+        raise ValueError("wrong model name input.")
+
     # set tensorboard
     logging = TensorBoard(log_dir=log_dir, update_freq='batch')
     # set check point
@@ -149,78 +216,48 @@ if __name__ == "__main__":
                 monitor='loss', save_weights_only=False, save_best_only=True, period=3)
     # set learning rate reduce
     reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.9, patience=3, min_lr=0.0001)
-    # get all necessary loss and performances
-    model.compile(loss=convsegModel.RegularLoss,
+
+    # choose loss function to compile model
+    if loss_name == "regular":
+        model.compile(loss=customModel.RegularLoss,
                 optimizer='adam',
-                metrics=[convsegModel.MetricsIOU, convsegModel.MetricsP, convsegModel.MetricsR])
+                metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
+    elif loss_name == "dice":
+        model.compile(loss=customModel.DiceLoss,
+                optimizer='adam',
+                metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
+    elif loss_name == "weighted":
+        model.compile(loss=customModel.WeightedLoss,
+                optimizer='adam',
+                metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
+    else:
+        raise ValueError("wrong loss name input.")
+ 
     # fit data
     model.fit_generator(trainGo.GetBatchData(), 
                         steps_per_epoch=trainGo.num_batch,
                         validation_data=testGo.GetBatchData(),
                         validation_steps=testGo.num_batch,
-                        epochs=500,
+                        epochs=epoches,
                         initial_epoch=0,
                         callbacks=[logging, reduce_lr, checkpoint])
 
     model.save_weights(log_dir + 'trained_weights_stage_1.h5')
 
-# pred = model.predict(oneimg)
-# pred1 = pred > 0.5
-# pred1 = pred1.astype(np.float32)
+if __name__ == "__main__":
+    """
+    model_name :
+        "segnet"
+        "convsegnet"
 
-# fig = plt.figure()
+    loss_name:
+        "regular"
+        "dice"
+        "weighted"
+    """
+    model_name = "segnet"
+    loss_name = "dice"
 
-# ax1 = fig.add_subplot(311)
-# ax2 = fig.add_subplot(312)
-# ax3 = fig.add_subplot(313)
-# oneimg = np.squeeze(oneimg)
-# onegt = np.squeeze(onegt)
-# pred = np.squeeze(pred)
-# pred1 = np.squeeze(pred1)
-# ax1.imshow(oneimg)
-# ax2.imshow(pred)
-# ax3.imshow(pred1)
-# plt.show()
-
-
-# convsegModel = ConvSegNet(model_input_size)
-
-# loss = convsegModel.RegularLoss()
-# # loss = convsegModel.WeightLoss()
-# # loss = convsegModel.IoULoss()
-
-# training = convsegModel.Optimization()
-# # overall, precision, recall = convsegModel.Metrics()
-
-# # summary_loss = tf.summary.scalar("loss", loss)
-# # streaming_overall, streaming_overall_update = tf.contrib.metrics.streaming_mean(overall)
-# # streaming_precision, streaming_precision_update = tf.contrib.metrics.streaming_mean(precision)
-# # streaming_recall, streaming_recall_update = tf.contrib.metrics.streaming_mean(recall)
-# # summary_overall = tf.summary.scalar("iou", streaming_overall)
-# # summary_precision = tf.summary.scalar("precision", streaming_precision)
-# # summary_recall = tf.summary.scalar("recall", streaming_recall)
-
-# # initialization
-# init = tf.global_variables_initializer()
-
-# # GPU settings
-# gpu_options = tf.GPUOptions(allow_growth=True)
-# print(K.learning_phase())
-
-# with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
-#     K.tensorflow_backend.set_session(sess)
-#     # summaries_train = 'logs/train/'
-#     # summaries_test = 'logs/test/'
-#     # train_writer = tf.summary.FileWriter(summaries_train + "original_loss", sess.graph)
-#     # test_writer = tf.summary.FileWriter(summaries_test + "original_loss", sess.graph)
-#     sess.run(init)
-#     with sess.as_default():
-#         for i in range(1000):
-#             l, _ = sess.run([loss, training], feed_dict = {convsegModel.X: oneimg,
-#                                                             convsegModel.Y: onegt,})
-#                                                             # K.learning_phase(): 1})
-#             print("-------------------------------")
-#             print("loss:", l)
-#     # for batch_imgs, batch_gts in dataGo.GetBatchData():
-#     #     test1 = sess.run(overall, feed_dict = {convsegModel.X: batch_imgs,
-#     #                                         convsegModel.Y: batch_gts})
+    # debug(model_name, loss_name)
+    main(model_name, loss_name)
+    

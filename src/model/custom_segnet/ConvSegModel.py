@@ -1,7 +1,7 @@
 import os
 ##### set specific gpu #####
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_VISIBLE_DEVICES"]="1"
 
 import tensorflow as tf
 import keras.layers as L
@@ -21,36 +21,21 @@ class ConvSegNet:
         self.X = L.Input(shape = (self.w, self.h, 1))
 
     def Conv2D_BN_ReLU(self, x, filters, kernel, strides, padding, if_last = False):
-        # kernel_regularizer = R.l2(5e-4)
-        # bias_regularizer = R.l2(5e-4)
-        kernel_regularizer = None
-        bias_regularizer = None
-        x = L.Conv2D(filters, kernel, strides=strides, padding=padding, \
-                    kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer)(x)
+        x = L.Conv2D(filters, kernel, strides=strides, padding=padding)(x)
         x = L.BatchNormalization()(x)
         x = L.ReLU()(x)
         # x = L.LeakyReLU(alpha = 0.1)(x)
         return x
     
     def DeConv2D_BN_ReLU(self, x, filters, kernel, strides, padding):
-        # kernel_regularizer = R.l2(5e-4)
-        # bias_regularizer = R.l2(5e-4)
-        kernel_regularizer = None
-        bias_regularizer = None
-        x = L.Conv2DTranspose(filters, kernel, strides=strides, padding=padding, \
-                    kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer)(x)
+        x = L.Conv2DTranspose(filters, kernel, strides=strides, padding=padding)(x)
         x = L.BatchNormalization()(x)
         x = L.ReLU()(x)
         # x = L.LeakyReLU(alpha = 0.1)(x)
         return x        
 
     def GatingConv2D(self, x, filters, kernel, strides, padding):
-        kernel_regularizer = R.l2(5e-4)
-        bias_regularizer = R.l2(5e-4)
-        # kernel_regularizer = None
-        # bias_regularizer = None
-        x = L.Conv2D(filters, kernel, strides=strides, padding=padding, activation='sigmoid', \
-                    kernel_regularizer=kernel_regularizer, bias_regularizer=bias_regularizer)(x)
+        x = L.Conv2D(filters, kernel, strides=strides, padding=padding, activation='sigmoid')(x)
         return x
     
     def ConvIterateBlock(self, x, filters, num_iteration):
@@ -82,31 +67,47 @@ class ConvSegNet:
             x = self.Conv2D_BN_ReLU(x, filters, [1,1], strides=(1,1), padding='same')
             filters = filters // 2
             x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        x = self.GatingConv2D(x, 1, [3,3], strides=(1,1), padding='same')
+        x = self.GatingConv2D(x, 1, [1,1], strides=(1,1), padding='same')
         return x
 
     def ConvSegBody(self):
         x = self.FirstLayer(self.X, 32, 3)
-        x = self.ConvIterateBlock(x, 32, 3)
+        # x = self.ConvIterateBlock(x, 32, 3)
         x = self.ConvIterateBlock(x, 64, 3)
         x = self.ConvIterateBlock(x, 128, 3)
         x = self.ConvIterateBlock(x, 256, 3)
-        x = self.ConvIterateBlock(x, 256, 3)
+        x = self.ConvIterateBlock(x, 512, 3)
 
-        x = self.DeConvIterateBlock(x, 256, 3)
+        x = self.DeConvIterateBlock(x, 512, 3)
         x = self.DeConvIterateBlock(x, 256, 3)
         x = self.DeConvIterateBlock(x, 128, 3)
         x = self.DeConvIterateBlock(x, 64, 3)
-        x = self.DeConvIterateBlock(x, 32, 3)
+        # x = self.DeConvIterateBlock(x, 32, 3)
         x = self.LastLayer(x, 32, 3)
         return Model(self.X, x)
     
-    def RegularLoss(self, y_ture, y_pred):
+    def RegularLoss(self, y_true, y_pred):
         logits = K.reshape(y_pred, [-1,])
-        labels = K.reshape(y_ture, [-1,])
+        labels = K.reshape(y_true, [-1,])
         loss = K.binary_crossentropy(target=labels, output=logits)
         loss = K.mean(loss)
         return loss
+
+    def WeightedLoss(self, y_true, y_pred):
+        one_weight = 0.89
+        zero_weight = 0.11
+        logits = K.reshape(y_pred, [-1,])
+        labels = K.reshape(y_true, [-1,])
+        loss = K.binary_crossentropy(target=labels, output=logits)
+        weight_vector = labels * one_weight + (1.-labels) * zero_weight
+        loss = weight_vector * loss
+        loss = K.mean(loss)
+        return loss
+
+    def DiceLoss(self, y_true, y_pred):
+        numerator = 2 * K.sum(y_true * y_pred, axis=-1)
+        denominator = K.sum(y_true + y_pred, axis=-1)
+        return 1 - (numerator + 1) / (denominator + 1)
 
     def MaskIoU(self, mask1, mask2):
         # mask1 = K.reshape(mask1, [-1, ])
@@ -124,24 +125,24 @@ class ConvSegNet:
         acc_mask2 = tf.reduce_mean(intersection) / (tf.reduce_mean(mask2) + 1e-6)
         return iou, acc_mask1, acc_mask2
 
-    def MetricsIOU(self, y_ture, y_pred):
+    def MetricsIOU(self, y_true, y_pred):
         y_pred_mask = tf.where(y_pred > 0.5, tf.ones_like(y_pred), \
                                                 tf.zeros_like(y_pred))
         # y_pred_mask = tf.cast(tf.greater(y_pred, 0.5 * tf.ones(tf.shape(y_pred))), tf.float32)
-        overall_iou, precision, recall = self.MaskIoU(y_pred_mask, y_ture)
+        overall_iou, precision, recall = self.MaskIoU(y_pred_mask, y_true)
         return overall_iou
 
-    def MetricsP(self, y_ture, y_pred):
+    def MetricsP(self, y_true, y_pred):
         y_pred_mask = tf.cast(tf.where(y_pred > 0.5, tf.ones_like(y_pred), \
                                                 tf.zeros_like(y_pred)), tf.float32)
         # y_pred_mask = tf.cast(tf.greater(y_pred, 0.5 * tf.ones(tf.shape(y_pred))), tf.float32)
-        overall_iou, precision, recall = self.MaskIoU(y_pred_mask, y_ture)
+        overall_iou, precision, recall = self.MaskIoU(y_pred_mask, y_true)
         return precision
 
-    def MetricsR(self, y_ture, y_pred):
+    def MetricsR(self, y_true, y_pred):
         y_pred_mask = tf.cast(tf.where(y_pred > 0.5, tf.ones_like(y_pred), \
                                                 tf.zeros_like(y_pred)), tf.float32)
         # y_pred_mask = tf.cast(tf.greater(y_pred, 0.5 * tf.ones(tf.shape(y_pred))), tf.float32)
-        overall_iou, precision, recall = self.MaskIoU(y_pred_mask, y_ture)
+        overall_iou, precision, recall = self.MaskIoU(y_pred_mask, y_true)
         return recall
     
