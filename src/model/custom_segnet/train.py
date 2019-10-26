@@ -41,7 +41,6 @@ def GetInputGt(img_name, gt_name, input_size_orig, scale):
 
     img = np.array(Image.open(img_name)).astype(np.float32)
     img = ChangeSize(img, input_size_orig, scale)
-    img = img / img.max()
     img = np.expand_dims(img, axis = -1)
     img = np.expand_dims(img, axis = 0)
     return img, gt
@@ -81,6 +80,7 @@ class DataGenerator:
         gt = np.expand_dims(gt, axis = 0)
 
         img = np.array(Image.open(img_name)).astype(np.float32)
+        img = img / img.max()
         img = self.ChangeSize(img)
         img = np.expand_dims(img, axis = -1)
         img = np.expand_dims(img, axis = 0)
@@ -110,7 +110,7 @@ class DataGenerator:
             yield batch_imgs, batch_labels
 
 if __name__ == "__main__":
-    batch_size = 3
+    batch_size = 2
     epoches = 100
     input_size_orig = (384, 1280)
     scale = 2
