@@ -1,17 +1,13 @@
 import os
 import random
 from glob import glob
-from itertools import chain
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import tensorflow as tf
-from skimage.io import concatenate_images, imread, imshow, show
-from skimage.morphology import label
 from skimage.transform import resize
 from tensorflow.keras.models import Model, load_model
-from tqdm import tnrange, tqdm
+from tqdm import tqdm
 
 
 def pad_data(data, width=1280, height=384):
@@ -57,6 +53,7 @@ def read_gt(filepath, width=1280, height=384):
     return np.asfarray(gt_list)
 
 def main():
+    # Load testing set into RAM
     img_list = read_img("./src/data_processing/test_in")
     gt_list = read_gt("./src/data_processing/test_out")
 
@@ -65,7 +62,7 @@ def main():
     print("Img's shape={}\t Gt's shaple={}".format(
         img_list[0].shape, gt_list[0].shape))
 
-
+    # Load model file and predict on testing set
     model = load_model("./model_folder/model-2019-10.h5")
     preds_test = model.predict(img_list, verbose=1)
 
@@ -73,13 +70,14 @@ def main():
     preds_test = (preds_test > 0.5).astype(np.uint8)
     print(preds_test.shape)
 
+    # calculate IOU
     intersection = np.logical_and(gt_list, preds_test)
     union = np.logical_or(gt_list, preds_test)
     iou_score = np.sum(intersection) / np.sum(union)
 
     print("IOU = {}".format(iou_score))
     
-    # Select random index from trainning set.
+    # Select random index from testing set and show.
     for i in range(5): 
         ix = random.randint(0, 300)
         has_mask = preds_test[ix].max() > 0

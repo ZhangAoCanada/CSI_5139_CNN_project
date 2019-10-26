@@ -1,14 +1,11 @@
 import os
 import random
 from glob import glob
-from itertools import chain
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
 import tensorflow as tf
 from skimage.io import concatenate_images, imread, imshow, show
-from skimage.morphology import label
 from skimage.transform import resize
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import (EarlyStopping, ModelCheckpoint,
@@ -20,10 +17,6 @@ from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
                                      concatenate)
 from tensorflow.keras.models import Model, load_model
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.preprocessing.image import (ImageDataGenerator,
-                                                  array_to_img, img_to_array,
-                                                  load_img)
-from tqdm import tnrange, tqdm_notebook
 
 
 def pad_data(data, width=1280, height=384):
