@@ -105,8 +105,13 @@ class ConvSegNet:
         return loss
 
     def DiceLoss(self, y_true, y_pred):
-        numerator = 2 * K.sum(y_true * y_pred, axis=-1)
-        denominator = K.sum(y_true + y_pred, axis=-1)
+        numerator = 2 * K.sum(y_true * y_pred)
+        denominator = K.sum(y_true + y_pred)
+        return 1 - (numerator + 1) / (denominator + 1)
+
+    def JaccardLoss(self, y_true, y_pred):
+        numerator = K.sum(y_true * y_pred)
+        denominator = K.sum(y_true + y_pred - y_true * y_pred)
         return 1 - (numerator + 1) / (denominator + 1)
 
     def MaskIoU(self, mask1, mask2):

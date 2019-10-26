@@ -11,6 +11,7 @@ import numpy as np
 import tensorflow as tf
 import keras.layers as L
 import keras.backend as K
+from keras.optimizers import Adam
 from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau
 from keras.models import Model
 from SegNetModel import SegNet
@@ -103,6 +104,8 @@ class DataGenerator:
                 img_name = self.input_dir + str(ind) + ".png"
                 gt_name = self.output_dir + str(ind) + ".npy"
                 img, gt = self.GetInputGt(img_name, gt_name)
+                if len(gt[gt == 1]) == 0:
+                    continue
                 batch_imgs.append(img)
                 batch_labels.append(gt)
             batch_imgs = np.concatenate(batch_imgs, axis = 0)
@@ -119,6 +122,7 @@ def debug(model_name, loss_name):
     epoches = 2000
     input_size_orig = (384, 1280)
     scale = 2
+    learning_rate_init = 1e-3
     model_input_size = (input_size_orig[0]//scale, input_size_orig[1]//scale)
 
     oneimg_name = "../../data_processing/train_in/10.png"
@@ -145,15 +149,15 @@ def debug(model_name, loss_name):
     # choose loss function to compile model
     if loss_name == "regular":
         model.compile(loss=customModel.RegularLoss,
-                optimizer='adam',
+                optimizer=Adam(lr=learning_rate_init),
                 metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
     elif loss_name == "dice":
         model.compile(loss=customModel.DiceLoss,
-                optimizer='adam',
+                optimizer=Adam(lr=learning_rate_init),
                 metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
     elif loss_name == "weighted":
         model.compile(loss=customModel.WeightedLoss,
-                optimizer='adam',
+                optimizer=Adam(lr=learning_rate_init),
                 metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
     else:
         raise ValueError("wrong loss name input.")
@@ -182,6 +186,7 @@ def main(model_name, loss_name):
     batch_size = 5
     epoches = 2000
     input_size_orig = (384, 1280)
+    learning_rate_init = 1e-3
     scale = 2
     model_input_size = (input_size_orig[0]//scale, input_size_orig[1]//scale)
     train_input_dir = "../../data_processing/train_in/"
@@ -215,20 +220,20 @@ def main(model_name, loss_name):
     checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}.h5',
                 monitor='loss', save_weights_only=False, save_best_only=True, period=3)
     # set learning rate reduce
-    reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.9, patience=3, min_lr=0.0001)
+    reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.5, patience=3, min_lr=0.00001)
 
     # choose loss function to compile model
     if loss_name == "regular":
         model.compile(loss=customModel.RegularLoss,
-                optimizer='adam',
+                optimizer=Adam(lr=learning_rate_init),
                 metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
     elif loss_name == "dice":
         model.compile(loss=customModel.DiceLoss,
-                optimizer='adam',
+                optimizer=Adam(lr=learning_rate_init),
                 metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
     elif loss_name == "weighted":
         model.compile(loss=customModel.WeightedLoss,
-                optimizer='adam',
+                optimizer=Adam(lr=learning_rate_init),
                 metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
     else:
         raise ValueError("wrong loss name input.")
@@ -242,6 +247,7 @@ def main(model_name, loss_name):
                         initial_epoch=0,
                         callbacks=[logging, reduce_lr, checkpoint])
 
+    # save weights
     model.save_weights(log_dir + 'trained_weights_stage_1.h5')
 
 if __name__ == "__main__":
