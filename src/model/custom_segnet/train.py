@@ -104,8 +104,8 @@ class DataGenerator:
                 img_name = self.input_dir + str(ind) + ".png"
                 gt_name = self.output_dir + str(ind) + ".npy"
                 img, gt = self.GetInputGt(img_name, gt_name)
-                if len(gt[gt == 1]) == 0:
-                    continue
+                # if len(gt[gt == 1]) == 0:
+                #     continue
                 batch_imgs.append(img)
                 batch_labels.append(gt)
             batch_imgs = np.concatenate(batch_imgs, axis = 0)
@@ -184,7 +184,7 @@ def debug(model_name, loss_name):
 
 def main(model_name, loss_name):
     batch_size = 5
-    epoches = 2000
+    epoches = 1000
     input_size_orig = (384, 1280)
     learning_rate_init = 1e-3
     scale = 2
@@ -218,9 +218,9 @@ def main(model_name, loss_name):
     logging = TensorBoard(log_dir=log_dir, update_freq='batch')
     # set check point
     checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}.h5',
-                monitor='loss', save_weights_only=False, save_best_only=True, period=3)
+                monitor='val_loss', save_weights_only=False, save_best_only=True, period=3)
     # set learning rate reduce
-    reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.5, patience=3, min_lr=0.00001)
+    reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.9, patience=3, min_lr=1e-6)
 
     # choose loss function to compile model
     if loss_name == "regular":
