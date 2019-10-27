@@ -184,9 +184,9 @@ def debug(model_name, loss_name):
 
 def main(model_name, loss_name):
     batch_size = 5
-    epoches = 1000
+    epoches = 800
     input_size_orig = (384, 1280)
-    learning_rate_init = 1e-3
+    learning_rate_init = 4e-4
     scale = 2
     model_input_size = (input_size_orig[0]//scale, input_size_orig[1]//scale)
     train_input_dir = "../../data_processing/train_in/"
@@ -235,6 +235,10 @@ def main(model_name, loss_name):
         model.compile(loss=customModel.WeightedLoss,
                 optimizer=Adam(lr=learning_rate_init),
                 metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
+    elif loss_name == "jaccard":
+        model.compile(loss=customModel.JaccardLoss,
+                optimizer=Adam(lr=learning_rate_init),
+                metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
     else:
         raise ValueError("wrong loss name input.")
  
@@ -260,10 +264,13 @@ if __name__ == "__main__":
         "regular"
         "dice"
         "weighted"
+        "jaccard"
     """
     model_name = "segnet"
-    loss_name = "dice"
+    loss_names = ["regular", "dice", "weighted", "jaccard"]
 
     # debug(model_name, loss_name)
-    main(model_name, loss_name)
+    for i in range(len(loss_names)):
+        loss_name = loss_names[i]
+        main(model_name, loss_name)
     
