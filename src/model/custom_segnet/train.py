@@ -193,7 +193,7 @@ def main(model_name, loss_name):
     train_output_dir = "../../data_processing/train_out/"
     test_input_dir = "../../data_processing/test_in/"
     test_output_dir = "../../data_processing/test_out/"
-    log_dir = 'logs/' + model_name + '_' + loss_name + "/"
+    log_dir = 'logs/' + 'data1_' + model_name + '_' + loss_name + "/"
 
     # create data generator
     trainGo = DataGenerator(train_input_dir, train_output_dir, input_size_orig, scale, batch_size)

@@ -12,6 +12,7 @@ import numpy as np
 from PIL import Image
 import pickle
 from glob import glob
+from tqdm import tqdm
 
 def FGandBG(mrcnn_dict):
     """
@@ -62,7 +63,7 @@ def ReadInputOutput(input_dir, gt_dir, num):
     all_img_names = glob(input_dir + "/*.png")
     num_imgs = len(all_img_names)
 
-    for  i in range(num_imgs):
+    for  i in tqdm(range(num_imgs)):
         # get image name
         img_count = str(i)
         zero_len = name_len - len(img_count)
@@ -75,6 +76,8 @@ def ReadInputOutput(input_dir, gt_dir, num):
         mask_fg, mask_bg = FGandBG(mrcnn_result)
         mask_fg = mask_fg > 0
         mask_fg = mask_fg.astype(np.float32)
+        # if len(mask_fg[mask_fg==1.]) == 0:
+        #     continue
 
         current_img.save("test_in/" + str(num) + ".png")
         mask_fg = np.save("test_out/" + str(num) + ".npy", mask_fg)
@@ -97,7 +100,11 @@ test_2012_gt_dir = "test_2012_mrcnn"
 
 num_start = 0
 
-num_middle = ReadInputOutput(test_2015_input_dir, test_2015_gt_dir, num_start)
-num_final = ReadInputOutput(test_2012_input_dir, test_2012_gt_dir, num_middle)
+# num_middle = ReadInputOutput(train_2015_input_dir, train_2015_gt_dir, num_start)
+# num_process = ReadInputOutput(train_2012_input_dir, train_2012_gt_dir, num_middle)
+# num_final = ReadInputOutput(test_2015_input_dir, test_2015_gt_dir, num_process)
+
+
+num_another = ReadInputOutput(test_2012_input_dir, test_2012_gt_dir, num_start)
 
 
