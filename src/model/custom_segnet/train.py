@@ -81,7 +81,7 @@ class DataGenerator:
         gt = np.expand_dims(gt, axis = 0)
 
         img = np.array(Image.open(img_name)).astype(np.float32)
-        img = img / img.max()
+        # img = img / img.max()
         img = self.ChangeSize(img)
         img = np.expand_dims(img, axis = -1)
         img = np.expand_dims(img, axis = 0)
@@ -128,8 +128,7 @@ def debug(model_name, loss_name):
     oneimg_name = "../../data_processing/train_in/10.png"
     onegt_name = "../../data_processing/train_out/10.npy"
     oneimg, onegt = GetInputGt(oneimg_name, onegt_name, input_size_orig, scale)
-    oneimg /= oneimg.max()
-    print([oneimg.shape, onegt.shape])
+    # oneimg /= oneimg.max()
 
     # GPU memory management
     config = tf.ConfigProto()
