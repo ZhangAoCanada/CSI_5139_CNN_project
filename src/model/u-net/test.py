@@ -160,34 +160,46 @@ model.summary()
 model.load_weights("modelfolder/model-tgs-salt-2.h5")
 
 # Predict on train, val and test
-preds_test = model.predict(img_list[:20], verbose=1)
+preds_test = model.predict(img_list, verbose=1)
+preds_test = (preds_test > 0.5).astype(np.uint8)
+
+# ix = 12
+# intersection = np.logical_and(gt_list[ix,...,0], preds_test[ix,...,0])
+# union = np.logical_or(gt_list[ix,...,0], preds_test[ix,...,0])
+# iou_score = np.sum(intersection) / np.sum(union)
+intersection = np.logical_and(gt_list, preds_test)
+union = np.logical_or(gt_list ,preds_test)
+iou_score = np.sum(intersection) / np.sum(union)
+print(iou_score)
+
+
 
 # Threshold predictions
-preds_test = (preds_test > 0.5).astype(np.uint8)
-print(preds_test.shape)
-# Select random index from trainning set.
-for i in range(5): 
-    ix = random.randint(0, 19)
-    has_mask = preds_test[ix].max() > 0
-    fig, ax = plt.subplots(2, 2)
-    print("show img {} and its mask".format(ix))
-    ax[0,0].imshow(img_list[ix, ..., 0], cmap='seismic')
-    if has_mask:
-        ax[0,0].contour(preds_test[ix].squeeze(), colors='k', levels=[0.5])
-    ax[0,0].set_title('Seismic')
+# preds_test = (preds_test > 0.5).astype(np.uint8)
+# print(preds_test.shape)
+# # Select random index from trainning set.
+# for i in range(5): 
+#     ix = random.randint(0, 19)
+#     has_mask = preds_test[ix].max() > 0
+#     fig, ax = plt.subplots(2, 2)
+#     print("show img {} and its mask".format(ix))
+#     ax[0,0].imshow(img_list[ix, ..., 0], cmap='seismic')
+#     if has_mask:
+#         ax[0,0].contour(preds_test[ix].squeeze(), colors='k', levels=[0.5])
+#     ax[0,0].set_title('Seismic')
 
-    ax[0,1].imshow(preds_test[ix].squeeze(),  cmap='gray')
-    ax[0,1].set_title('test')
+#     ax[0,1].imshow(preds_test[ix].squeeze(),  cmap='gray')
+#     ax[0,1].set_title('test')
 
 
-    ax[1,0].imshow(img_list[ix, ..., 0], cmap='seismic')
-    if has_mask:
-        ax[1,0].contour(gt_list[ix].squeeze(), colors='k', levels=[0.5])
-    ax[1,0].set_title('Seismic')
+#     ax[1,0].imshow(img_list[ix, ..., 0], cmap='seismic')
+#     if has_mask:
+#         ax[1,0].contour(gt_list[ix].squeeze(), colors='k', levels=[0.5])
+#     ax[1,0].set_title('Seismic')
 
-    ax[1,1].imshow(gt_list[ix].squeeze(),  cmap='gray')
-    ax[1,1].set_title('ground truth')
-    show()
+#     ax[1,1].imshow(gt_list[ix].squeeze(),  cmap='gray')
+#     ax[1,1].set_title('ground truth')
+#     show()
 # Re-evaluate the model
 # loss, acc = model.evaluate(img_list,  gt_list, verbose=2)
 # print("Restored model, accuracy: {:5.2f}%".format(100*acc))
