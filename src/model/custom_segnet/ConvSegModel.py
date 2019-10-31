@@ -20,11 +20,14 @@ class ConvSegNet:
             raise ValueError("Wrong image input size, the width and height should be even numbers.")
         self.X = L.Input(shape = (self.w, self.h, 1))
 
-    def Conv2D_BN_ReLU(self, x, filters, kernel, strides, padding, if_last = False):
+    def Conv2D_BN_ReLU(self, x, filters, kernel, strides, padding):
         x = L.Conv2D(filters, kernel, strides=strides, padding=padding)(x)
         x = L.BatchNormalization()(x)
         x = L.ReLU()(x)
-        # x = L.LeakyReLU(alpha = 0.1)(x)
+        return x
+
+    def GatingConv2D(self, x, filters, kernel, strides, padding):
+        x = L.Conv2D(filters, kernel, strides=strides, padding=padding, activation='sigmoid')(x)
         return x
     
     def DeConv2D_BN_ReLU(self, x, filters, kernel, strides, padding):
@@ -38,52 +41,46 @@ class ConvSegNet:
         x = L.Conv2D(filters, kernel, strides=strides, padding=padding, activation='sigmoid')(x)
         return x
     
-    def ConvIterateBlock(self, x, filters, num_iteration):
+    def ConvTwoBlock(self, x, filters):
+        x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
         x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(2,2), padding='same')
-        x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        for i in range(num_iteration):
-            x = self.Conv2D_BN_ReLU(x, filters, [1,1], strides=(1,1), padding='same')
-            x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        return x
-
-    def DeConvIterateBlock(self, x, filters, num_iteration):
-        x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        for i in range(num_iteration):
-            x = self.Conv2D_BN_ReLU(x, filters, [1,1], strides=(1,1), padding='same')
-            x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        x = self.DeConv2D_BN_ReLU(x, filters, [3,3], strides=(2,2), padding='same')
-        return x
-
-    def FirstLayer(self, x, filters, num_iteration):
-        x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        for i in range(num_iteration):
-            x = self.Conv2D_BN_ReLU(x, filters, [1,1], strides=(1,1), padding='same')
-            x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
         return x
     
-    def LastLayer(self, x, filters, num_iteration):
+    def ConvThreeBlock(self, x, filters):
         x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        for i in range(num_iteration):
-            x = self.Conv2D_BN_ReLU(x, filters, [1,1], strides=(1,1), padding='same')
-            filters = filters // 2
-            x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
-        x = self.GatingConv2D(x, 1, [1,1], strides=(1,1), padding='same')
+        x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
+        x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(2,2), padding='same')
+        return x
+
+    def DeConvBlock(self, x ,filters, final_filters):
+        x = self.DeConv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
+        x = self.DeConv2D_BN_ReLU(x, final_filters, [3,3], strides=(1,1), padding='same')
+        x = self.DeConv2D_BN_ReLU(x, final_filters, [3,3], strides=(2,2), padding='same')
+        return x
+
+    def DeConvTwoBlock(self, x ,filters, final_filters):
+        x = self.DeConv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
+        x = self.DeConv2D_BN_ReLU(x, final_filters, [3,3], strides=(2,2), padding='same')
+        return x
+    
+    def LastLayer(self, x ,filters, final_filters):
+        x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
+        x = self.GatingConv2D(x, final_filters, [1,1], strides=(1,1), padding='same')
         return x
 
     def ConvSegBody(self):
-        x = self.FirstLayer(self.X, 32, 3)
-        # x = self.ConvIterateBlock(x, 32, 3)
-        x = self.ConvIterateBlock(x, 64, 3)
-        x = self.ConvIterateBlock(x, 128, 3)
-        x = self.ConvIterateBlock(x, 256, 3)
-        x = self.ConvIterateBlock(x, 512, 3)
+        x = self.ConvTwoBlock(self.X, 64)
+        x = self.ConvTwoBlock(x, 128)
+        x = self.ConvTwoBlock(x, 256)
+        x = self.ConvTwoBlock(x, 512)
+        x = self.ConvTwoBlock(x, 512)
 
-        x = self.DeConvIterateBlock(x, 512, 3)
-        x = self.DeConvIterateBlock(x, 256, 3)
-        x = self.DeConvIterateBlock(x, 128, 3)
-        x = self.DeConvIterateBlock(x, 64, 3)
-        # x = self.DeConvIterateBlock(x, 32, 3)
-        x = self.LastLayer(x, 32, 3)
+        x = self.DeConvTwoBlock(x, 512, 512)
+        x = self.DeConvTwoBlock(x, 512, 512)
+        x = self.DeConvTwoBlock(x, 512, 256)
+        x = self.DeConvTwoBlock(x, 256, 128)
+        x = self.DeConvTwoBlock(x, 128, 64)
+        x = self.LastLayer(x, 64, 1)
         return Model(self.X, x)
     
     def RegularLoss(self, y_true, y_pred):
@@ -91,6 +88,10 @@ class ConvSegNet:
         labels = K.reshape(y_true, [-1,])
         loss = K.binary_crossentropy(target=labels, output=logits)
         loss = K.mean(loss)
+        return loss
+
+    def MSE(self, y_true, y_pred):
+        loss = K.mean(K.square(y_true - y_pred))
         return loss
 
     def WeightedLoss(self, y_true, y_pred):
@@ -109,45 +110,39 @@ class ConvSegNet:
         denominator = K.sum(y_true + y_pred)
         return 1 - (numerator + 1) / (denominator + 1)
 
-    def JaccardLoss(self, y_true, y_pred):
+    def Jaccard(self, y_true, y_pred):
         numerator = K.sum(y_true * y_pred)
         denominator = K.sum(y_true + y_pred - y_true * y_pred)
-        return 1 - (numerator + 1) / (denominator + 1)
+        return (numerator + 1) / (denominator + 1)
+
+    def TransferToMask(self, arr):
+        arr_reshape = K.reshape(arr, [-1,])
+        arr_bool = K.greater(arr_reshape, 0.5)
+        arr_bool_float = K.cast(arr_bool, 'float32')
+        return arr_bool_float
 
     def MaskIoU(self, mask1, mask2):
-        # mask1 = K.reshape(mask1, [-1, ])
-        # mask2 = K.reshape(mask2, [-1, ])
-        mask1 = tf.squeeze(mask1)
-        mask2 = tf.squeeze(mask2)
-        mask1_bool = tf.cast(mask1, tf.bool)
-        mask2_bool = tf.cast(mask2, tf.bool)
-        intersection = tf.cast(tf.logical_and(mask1_bool, mask2_bool), tf.float32)
-        union = tf.cast(tf.logical_or(mask1_bool, mask2_bool), tf.float32)
-        # union = K.cast(K.any(K.stack([mask1, mask2], axis=0), axis=0), 'float32')
-        # intersection = K.cast(K.all(K.stack([mask1, mask2], axis=0), axis=0), 'float32')
-        iou = tf.reduce_mean(intersection) / (tf.reduce_mean(union) + 1e-6)
-        acc_mask1 = tf.reduce_mean(intersection) / (tf.reduce_mean(mask1) + 1e-6)
-        acc_mask2 = tf.reduce_mean(intersection) / (tf.reduce_mean(mask2) + 1e-6)
+        intersection = mask1 * mask2
+        union = mask2  + mask2 - intersection
+        iou = tf.reduce_mean(intersection) / (tf.reduce_mean(union) + 1e-5)
+        acc_mask1 = tf.reduce_mean(intersection) / (tf.reduce_mean(mask1) + 1e-5)
+        acc_mask2 = tf.reduce_mean(intersection) / (tf.reduce_mean(mask2) + 1e-5)
         return iou, acc_mask1, acc_mask2
 
     def MetricsIOU(self, y_true, y_pred):
-        y_pred_mask = tf.where(y_pred > 0.5, tf.ones_like(y_pred), \
-                                                tf.zeros_like(y_pred))
-        # y_pred_mask = tf.cast(tf.greater(y_pred, 0.5 * tf.ones(tf.shape(y_pred))), tf.float32)
-        overall_iou, precision, recall = self.MaskIoU(y_pred_mask, y_true)
+        iou_fg = self.Jaccard(y_true, y_pred)
+        iou_bg = self.Jaccard(1.-y_true, 1.-y_pred)
+        overall_iou = iou_fg * iou_bg
         return overall_iou
 
     def MetricsP(self, y_true, y_pred):
-        y_pred_mask = tf.cast(tf.where(y_pred > 0.5, tf.ones_like(y_pred), \
-                                                tf.zeros_like(y_pred)), tf.float32)
-        # y_pred_mask = tf.cast(tf.greater(y_pred, 0.5 * tf.ones(tf.shape(y_pred))), tf.float32)
-        overall_iou, precision, recall = self.MaskIoU(y_pred_mask, y_true)
+        y_true_mask = self.TransferToMask(y_true)
+        y_pred_mask = self.TransferToMask(y_pred)
+        overall_iou, precision, recall = self.MaskIoU(y_pred_mask, y_true_mask)
         return precision
 
     def MetricsR(self, y_true, y_pred):
-        y_pred_mask = tf.cast(tf.where(y_pred > 0.5, tf.ones_like(y_pred), \
-                                                tf.zeros_like(y_pred)), tf.float32)
-        # y_pred_mask = tf.cast(tf.greater(y_pred, 0.5 * tf.ones(tf.shape(y_pred))), tf.float32)
-        overall_iou, precision, recall = self.MaskIoU(y_pred_mask, y_true)
+        y_true_mask = self.TransferToMask(y_true)
+        y_pred_mask = self.TransferToMask(y_pred)
+        overall_iou, precision, recall = self.MaskIoU(y_pred_mask, y_true_mask)
         return recall
-    

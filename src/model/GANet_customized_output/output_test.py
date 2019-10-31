@@ -118,6 +118,8 @@ def PredDisp(kitti_dir, save_dir, if_2015 = True):
     if if_2015:
         left_img_dir = kitti_dir + "image_2/"
         right_img_dir = kitti_dir + "image_3/"
+        # left_img_dir = "img/left/"
+        # right_img_dir = "img/right/"
     else:
         left_img_dir = kitti_dir + "colored_0/"
         right_img_dir = kitti_dir + "colored_1/"
@@ -137,14 +139,37 @@ def PredDisp(kitti_dir, save_dir, if_2015 = True):
         save_name = save_dir + img_name
         test(left_img_name, right_img_name, save_name)
 
+def debug(kitti_dir, save_dir, if_2015 = True):
+    if if_2015:
+        left_img_dir = kitti_dir + "image_2/"
+        right_img_dir = kitti_dir + "image_3/"
+    else:
+        left_img_dir = kitti_dir + "colored_0/"
+        right_img_dir = kitti_dir + "colored_1/"
+
+    name_len = 6
+
+    all_img_names = glob(left_img_dir + "*11.png")
+    total_disparity_num = len(all_img_names)
+
+    for i in tqdm(range(total_disparity_num)):
+        img_count = str(i)
+        zero_len = name_len - len(img_count)
+        img_name = (zero_len * "0") + img_count + "_11.png"
+
+        left_img_name = left_img_dir + img_name
+        right_img_name = right_img_dir + img_name
+        save_name = save_dir + img_name
+        test(left_img_name, right_img_name, save_name)
 
 if __name__ == "__main__":
 
-    # kitti_dir_2012_test = "/home/azhang/Documents/kitti/2012/testing/"
+    kitti_dir_2012_test = "/home/azhang/Documents/kitti/2012/testing/"
     # kitti_dir_2012_train = "/home/azhang/Documents/kitti/2012/training/"
-    kitti_dir_2015_test = "/home/azhang/Documents/kitti/2015/testing/"
+    # kitti_dir_2015_test = "/home/azhang/Documents/kitti/2015/testing/"
     # kitti_dir_2015_train = "/home/azhang/Documents/kitti/2015/training/"
 
     save_dir = "./result/"
 
-    PredDisp(kitti_dir_2015_test, save_dir, True)
+    # PredDisp(kitti_dir_2015_test, save_dir, True)
+    debug(kitti_dir_2012_test, save_dir, False)

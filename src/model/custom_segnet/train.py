@@ -12,7 +12,7 @@ import tensorflow as tf
 import keras.layers as L
 import keras.backend as K
 from keras.optimizers import Adam
-from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau
+from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau, EarlyStopping
 from keras.models import Model
 from SegNetModel import SegNet
 from ConvSegModel import ConvSegNet
@@ -89,6 +89,7 @@ class DataGenerator:
 
     def GetBatchData(self):
         all_index = np.arange(len(self.all_imgs))
+        np.random.seed(1010101)
         np.random.shuffle(all_index)
         num_batches = len(all_index) // self.batch_size
         batch_i = 0
@@ -104,6 +105,7 @@ class DataGenerator:
                 img_name = self.input_dir + str(ind) + ".png"
                 gt_name = self.output_dir + str(ind) + ".npy"
                 img, gt = self.GetInputGt(img_name, gt_name)
+                img = img / 45000.
                 # if len(gt[gt == 1]) == 0:
                 #     continue
                 batch_imgs.append(img)
@@ -128,7 +130,7 @@ def debug(model_name, loss_name):
     oneimg_name = "../../data_processing/train_in/10.png"
     onegt_name = "../../data_processing/train_out/10.npy"
     oneimg, onegt = GetInputGt(oneimg_name, onegt_name, input_size_orig, scale)
-    # oneimg /= oneimg.max()
+    oneimg /= 45000
 
     # GPU memory management
     config = tf.ConfigProto()
@@ -157,7 +159,7 @@ def debug(model_name, loss_name):
     elif loss_name == "weighted":
         model.compile(loss=customModel.WeightedLoss,
                 optimizer=Adam(lr=learning_rate_init),
-                metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
+                metrics=[customModel.Jaccard, customModel.MetricsP, customModel.MetricsR])
     else:
         raise ValueError("wrong loss name input.")
 
@@ -183,16 +185,16 @@ def debug(model_name, loss_name):
 
 def main(model_name, loss_name):
     batch_size = 5
-    epoches = 800
+    epoches = 300
     input_size_orig = (384, 1280)
-    learning_rate_init = 4e-4
+    learning_rate_init = 1e-3
     scale = 2
     model_input_size = (input_size_orig[0]//scale, input_size_orig[1]//scale)
     train_input_dir = "../../data_processing/train_in/"
     train_output_dir = "../../data_processing/train_out/"
     test_input_dir = "../../data_processing/test_in/"
     test_output_dir = "../../data_processing/test_out/"
-    log_dir = 'logs/' + 'data1_' + model_name + '_' + loss_name + "/"
+    log_dir = 'logs2/' + 'newdatalr_' + model_name + '_' + loss_name + "/"
 
     # create data generator
     trainGo = DataGenerator(train_input_dir, train_output_dir, input_size_orig, scale, batch_size)
@@ -217,27 +219,33 @@ def main(model_name, loss_name):
     logging = TensorBoard(log_dir=log_dir, update_freq='batch')
     # set check point
     checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}.h5',
-                monitor='val_loss', save_weights_only=False, save_best_only=True, period=3)
+                monitor='val_MetricsIOU', save_weights_only=False, save_best_only=True, period=3)
     # set learning rate reduce
-    reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.9, patience=3, min_lr=1e-6)
+    reduce_lr = ReduceLROnPlateau(monitor='val_MetricsIOU', factor=0.96, patience=2, min_lr=1e-8)
+    early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=20, verbose=1)
 
     # choose loss function to compile model
+    # , customModel.MetricsP, customModel.MetricsR
     if loss_name == "regular":
         model.compile(loss=customModel.RegularLoss,
                 optimizer=Adam(lr=learning_rate_init),
-                metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
+                metrics=[customModel.MetricsIOU])
     elif loss_name == "dice":
         model.compile(loss=customModel.DiceLoss,
                 optimizer=Adam(lr=learning_rate_init),
-                metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
+                metrics=[customModel.MetricsIOU])
     elif loss_name == "weighted":
         model.compile(loss=customModel.WeightedLoss,
                 optimizer=Adam(lr=learning_rate_init),
-                metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
+                metrics=[customModel.MetricsIOU])
     elif loss_name == "jaccard":
         model.compile(loss=customModel.JaccardLoss,
                 optimizer=Adam(lr=learning_rate_init),
-                metrics=[customModel.MetricsIOU, customModel.MetricsP, customModel.MetricsR])
+                metrics=[customModel.MetricsIOU])
+    elif loss_name == "MSE":
+        model.compile(loss=customModel.MSE,
+                optimizer=Adam(lr=learning_rate_init),
+                metrics=[customModel.MetricsIOU])
     else:
         raise ValueError("wrong loss name input.")
  
@@ -263,13 +271,15 @@ if __name__ == "__main__":
         "regular"
         "dice"
         "weighted"
-        "jaccard"
+        "MSE"
     """
-    model_name = "segnet"
-    loss_names = ["regular", "dice", "weighted", "jaccard"]
+    model_names = ["segnet", "convsegnet"]
+    loss_names = ["regular", "dice", "MSE", "weighted"]
 
-    # debug(model_name, loss_name)
-    for i in range(len(loss_names)):
-        loss_name = loss_names[i]
-        main(model_name, loss_name)
+    # debug("convsegnet", "dice")
+    for k in range(len(model_names)):
+        model_name = model_names[k]
+        for i in range(len(loss_names)):
+            loss_name = loss_names[i]
+            main(model_name, loss_name)
     

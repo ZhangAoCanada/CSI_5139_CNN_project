@@ -52,7 +52,7 @@ def FGandBG(mrcnn_dict):
     return mask_fg, mask_bg
 
 
-def ReadInputOutput(input_dir, gt_dir, num, on_test = False, train_set = True):
+def ReadInputOutput(input_dir, gt_dir, num, imname, on_test = False, train_set = True):
     """
     Function:
         Read the disparity map from the dirctory.
@@ -60,18 +60,12 @@ def ReadInputOutput(input_dir, gt_dir, num, on_test = False, train_set = True):
     # default image name
     name_len = 6
     # read all images to count the total number of images
-    all_img_names = glob(input_dir + "/*.png")
+    all_img_names = glob(input_dir + "/*" + imname + ".png")
     num_imgs = len(all_img_names)
+    max_total = 0.
 
     if on_test:
         num_imgs //= 2
-
-    if train_set:
-        folder_name_in = "train_in/"
-        folder_name_out = "train_out/"
-    else:
-        folder_name_in = "test_in/"
-        folder_name_out = "test_out/"
 
     for  i in tqdm(range(num_imgs)):
         # get image name
@@ -80,9 +74,12 @@ def ReadInputOutput(input_dir, gt_dir, num, on_test = False, train_set = True):
         else:
             img_count = str(i + num_imgs)
         zero_len = name_len - len(img_count)
-        img_name = (zero_len * "0") + img_count + "_10"
+        img_name = (zero_len * "0") + img_count + imname
         # read image 
         current_img = Image.open(input_dir + "/" + img_name + ".png")
+        max_num = np.array(current_img).max()
+        if max_num >= max_total:
+            max_total = max_num
         # read mask
         with open(gt_dir + "/" + img_name + ".pickle", "rb") as f:
             mrcnn_result = pickle.load(f)
@@ -92,9 +89,10 @@ def ReadInputOutput(input_dir, gt_dir, num, on_test = False, train_set = True):
         # if len(mask_fg[mask_fg==1.]) == 0:
         #     continue
 
-        current_img.save(folder_name_in + str(num) + ".png")
-        mask_fg = np.save(folder_name_out + str(num) + ".npy", mask_fg)
+        current_img.save("test_in/" + str(num) + ".png")
+        mask_fg = np.save("test_out/" + str(num) + ".npy", mask_fg)
         num += 1
+    print("-------------", max_total)
     return num
 
 
@@ -113,11 +111,25 @@ test_2012_gt_dir = "test_2012_mrcnn"
 
 num_start = 0
 
-num_middle = ReadInputOutput(train_2015_input_dir, train_2015_gt_dir, num_start, on_test = False, train_set = True)
-num_process = ReadInputOutput(train_2012_input_dir, train_2012_gt_dir, num_middle, on_test = False, train_set = True)
-num_final = ReadInputOutput(test_2015_input_dir, test_2015_gt_dir, num_process, on_test = True, train_set = False)
+# num_middle1 = ReadInputOutput(train_2015_input_dir, train_2015_gt_dir, num_start, "_10", on_test = False, train_set = True)
+# num_middle2 = ReadInputOutput(train_2015_input_dir, train_2015_gt_dir, num_middle1, "_11", on_test = False, train_set = True)
+
+# num_middle3 = ReadInputOutput(train_2012_input_dir, train_2012_gt_dir, num_middle2, "_10", on_test = False, train_set = True)
+# num_middle4 = ReadInputOutput(train_2012_input_dir, train_2012_gt_dir, num_middle3, "_11", on_test = False, train_set = True)
+
+# num_middle5 = ReadInputOutput(test_2015_input_dir, test_2015_gt_dir, num_middle4, "_10", on_test = True, train_set = True)
+# num_middle6 = ReadInputOutput(test_2015_input_dir, test_2015_gt_dir, num_middle5, "_11", on_test = True, train_set = True)
+
+# num_middle7 = ReadInputOutput(test_2012_input_dir, test_2012_gt_dir, num_middle6, "_10", on_test = True, train_set = True)
+# num_another = ReadInputOutput(test_2012_input_dir, test_2012_gt_dir, num_middle7, "_11", on_test = True, train_set = True)
 
 
-num_another = ReadInputOutput(test_2012_input_dir, test_2012_gt_dir, num_start)
+
+num_middle1 = ReadInputOutput(test_2015_input_dir, test_2015_gt_dir, num_start, "_10", on_test = True, train_set = False)
+num_middle2 = ReadInputOutput(test_2015_input_dir, test_2015_gt_dir, num_middle1, "_11", on_test = True, train_set = False)
+
+num_middle3 = ReadInputOutput(test_2012_input_dir, test_2012_gt_dir, num_middle2, "_10", on_test = True, train_set = False)
+num_aanother = ReadInputOutput(test_2012_input_dir, test_2012_gt_dir, num_middle3, "_11", on_test = True, train_set = False)
+
 
 

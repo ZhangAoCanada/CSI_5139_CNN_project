@@ -102,6 +102,10 @@ class SegNet:
         loss = K.mean(loss)
         return loss
 
+    def MSE(self, y_true, y_pred):
+        loss = K.mean(K.square(y_true - y_pred))
+        return loss
+
     def WeightedLoss(self, y_true, y_pred):
         one_weight = 0.89
         zero_weight = 0.11
@@ -118,41 +122,41 @@ class SegNet:
         denominator = K.sum(y_true + y_pred)
         return 1 - (numerator + 1) / (denominator + 1)
 
-    def JaccardLoss(self, y_true, y_pred):
+    def Jaccard(self, y_true, y_pred):
         numerator = K.sum(y_true * y_pred)
         denominator = K.sum(y_true + y_pred - y_true * y_pred)
-        return 1 - (numerator + 1) / (denominator + 1)
+        return (numerator + 1) / (denominator + 1)
+
+    def TransferToMask(self, arr):
+        arr_reshape = K.reshape(arr, [-1,])
+        arr_bool = K.greater(arr_reshape, 0.5)
+        arr_bool_float = K.cast(arr_bool, 'float32')
+        return arr_bool_float
 
     def MaskIoU(self, mask1, mask2):
         intersection = mask1 * mask2
         union = mask2  + mask2 - intersection
-        iou = tf.reduce_mean(intersection) / (tf.reduce_mean(union) + 1e-6)
-        acc_mask1 = tf.reduce_mean(intersection) / (tf.reduce_mean(mask1) + 1e-6)
-        acc_mask2 = tf.reduce_mean(intersection) / (tf.reduce_mean(mask2) + 1e-6)
+        iou = tf.reduce_mean(intersection) / (tf.reduce_mean(union) + 1e-5)
+        acc_mask1 = tf.reduce_mean(intersection) / (tf.reduce_mean(mask1) + 1e-5)
+        acc_mask2 = tf.reduce_mean(intersection) / (tf.reduce_mean(mask2) + 1e-5)
         return iou, acc_mask1, acc_mask2
 
     def MetricsIOU(self, y_true, y_pred):
-        # y_pred_mask = tf.where(y_pred > 0.5, tf.ones_like(y_pred), \
-        #                                         tf.zeros_like(y_pred))
-        # y_pred_mask = tf.cast(tf.greater(y_pred, 0.5 * tf.ones(tf.shape(y_pred))), tf.float32)
-        # overall_iou, precision, recall = self.MaskIoU(y_pred_mask, y_true)
-        overall_iou, precision, recall = self.MaskIoU(y_pred, y_true)
+        iou_fg = self.Jaccard(y_true, y_pred)
+        iou_bg = self.Jaccard(1.-y_true, 1.-y_pred)
+        overall_iou = iou_fg * iou_bg
         return overall_iou
 
     def MetricsP(self, y_true, y_pred):
-        # y_pred_mask = tf.cast(tf.where(y_pred > 0.5, tf.ones_like(y_pred), \
-        #                                         tf.zeros_like(y_pred)), tf.float32)
-        # y_pred_mask = tf.cast(tf.greater(y_pred, 0.5 * tf.ones(tf.shape(y_pred))), tf.float32)
-        # overall_iou, precision, recall = self.MaskIoU(y_pred_mask, y_true)
-        overall_iou, precision, recall = self.MaskIoU(y_pred, y_true)
+        y_true_mask = self.TransferToMask(y_true)
+        y_pred_mask = self.TransferToMask(y_pred)
+        overall_iou, precision, recall = self.MaskIoU(y_pred_mask, y_true_mask)
         return precision
 
     def MetricsR(self, y_true, y_pred):
-        # y_pred_mask = tf.cast(tf.where(y_pred > 0.5, tf.ones_like(y_pred), \
-        #                                         tf.zeros_like(y_pred)), tf.float32)
-        # y_pred_mask = tf.cast(tf.greater(y_pred, 0.5 * tf.ones(tf.shape(y_pred))), tf.float32)
-        # overall_iou, precision, recall = self.MaskIoU(y_pred_mask, y_true)
-        overall_iou, precision, recall = self.MaskIoU(y_pred, y_true)
+        y_true_mask = self.TransferToMask(y_true)
+        y_pred_mask = self.TransferToMask(y_pred)
+        overall_iou, precision, recall = self.MaskIoU(y_pred_mask, y_true_mask)
         return recall
     
 

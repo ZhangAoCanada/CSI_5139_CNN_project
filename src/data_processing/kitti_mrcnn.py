@@ -230,14 +230,14 @@ def main(kitti_dir, prefix, mode = "test", if_2015 = True, if_save = True):
     # load mrcnn model
     model, class_names = MRcnnModel()
 
-    plt.ion()
-    fig = plt.figure()
-    ax1 = fig.add_subplot(111)
+    # plt.ion()
+    # fig = plt.figure()
+    # ax1 = fig.add_subplot(111)
 
     for i in tqdm(range(wield_number, total_disparity_num)):
         img_count = str(i)
         zero_len = name_len - len(img_count)
-        img_name = (zero_len * "0") + img_count + "_10"
+        img_name = (zero_len * "0") + img_count + "_11"
 
         # disp_img = skimage.io.imread(disparity_noc_dir + img_name)
         left_img = skimage.io.imread(left_img_dir + img_name + ".png")
@@ -256,23 +256,23 @@ def main(kitti_dir, prefix, mode = "test", if_2015 = True, if_save = True):
         # print("Image shape: ",image.shape)
         # print("Mask shape: ",r['masks'].shape)
 
-        masked_img1 = display_instances(left_img, r['rois'], r['masks'], r['class_ids'], 
-                                        class_names, r['scores'], colors = colors_all, 
-                                        ax = ax1, fig = fig)
+        # masked_img1 = display_instances(left_img, r['rois'], r['masks'], r['class_ids'], 
+        #                                 class_names, r['scores'], colors = colors_all, 
+        #                                 ax = ax1, fig = fig)
 
-        masked_img2 = display_instances(GANet_img, r['rois'], r['masks'], r['class_ids'], 
-                                        class_names, r['scores'], colors = colors_all, 
-                                        ax = ax1, fig = fig)
+        # masked_img2 = display_instances(GANet_img, r['rois'], r['masks'], r['class_ids'], 
+        #                                 class_names, r['scores'], colors = colors_all, 
+        #                                 ax = ax1, fig = fig)
 
         if if_save:
             with open(prefix + img_name + ".pickle", "wb") as fp:
                 pickle.dump(r, fp)
 
-        display_image = np.concatenate([masked_img1, masked_img2], axis = 0)
-        ax1.clear()
-        ax1.imshow(display_image.astype(np.uint8))
-        fig.canvas.draw()
-        plt.pause(0.01)
+        # display_image = np.concatenate([masked_img1, masked_img2], axis = 0)
+        # ax1.clear()
+        # ax1.imshow(display_image.astype(np.uint8))
+        # fig.canvas.draw()
+        # plt.pause(0.01)
 
 if __name__ == "__main__":
     
