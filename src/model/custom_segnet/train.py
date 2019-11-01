@@ -276,7 +276,7 @@ if __name__ == "__main__":
     model_names = ["segnet", "convsegnet"]
     loss_names = ["regular", "dice", "MSE", "weighted"]
 
-    # debug("convsegnet", "dice")
+    # debug("convsegnet", "regular")
     for k in range(len(model_names)):
         model_name = model_names[k]
         for i in range(len(loss_names)):
