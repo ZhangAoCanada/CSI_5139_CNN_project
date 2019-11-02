@@ -41,9 +41,12 @@ def pad_data(data, width=1280, height=384):
     data_pad = np.pad(data, ((0, deltar), (0, deltac)))
     return data_pad
 
+
 def resize_data(data, width=1280, height=384):
-    data = resize(data,(height,width, 1), mode='constant', preserve_range=True)
+    data = resize(data, (height, width, 1),
+                  mode='constant', preserve_range=True)
     return data
+
 
 def read_img(filepath, width=1280, height=384):
     img_list = []
@@ -56,8 +59,6 @@ def read_img(filepath, width=1280, height=384):
         img_list.append(img_pad)
     return np.asfarray(img_list)
 
-
-
 def read_gt(filepath, width=1280, height=384):
     gt_list = []
     all_files = glob(filepath+"/*npy")
@@ -67,7 +68,6 @@ def read_gt(filepath, width=1280, height=384):
         gt_pad = resize_data(gt_pad)
         gt_list.append(gt_pad)
     return np.asfarray(gt_list)
-
 
 img_list = read_img("./src/data_processing/train_in")
 gt_list = read_gt("./src/data_processing/train_out")
@@ -96,21 +96,25 @@ show()
 #######################################################
 
 # Split training data into valid and train sets
-X_train, X_valid, y_train, y_valid = train_test_split(img_list, gt_list, test_size=0.15, random_state = 2019 )
-print("X_train: {}\ty_train: {}\tX_valid: {}\ty_valid: {}\t".format(X_train.shape, y_train.shape , X_valid.shape, y_valid.shape))
+X_train, X_valid, y_train, y_valid = train_test_split(
+    img_list, gt_list, test_size=0.15, random_state=2019)
+print("X_train: {}\ty_train: {}\tX_valid: {}\ty_valid: {}\t".format(
+    X_train.shape, y_train.shape, X_valid.shape, y_valid.shape))
 
 im_width = 1280
 im_height = 384
 input_img = Input((im_height, im_width, 1), name='img')
 unet = Unet()
 model = unet.get_unet(input_img)
-unet.compileModel()
+lossNames = ["CE", "MSE", "Dice", "Weighted"]
+unet.compileModel(lossNames[0])
 
 log_dir = "./logs_00"
-callbacks = [
+callbacks = [   
     EarlyStopping(patience=5, verbose=1),
     ReduceLROnPlateau(factor=0.1, patience=3, min_lr=0.00001, verbose=1),
-    ModelCheckpoint('model-tgs-salt.h5', verbose=1, save_best_only=True, save_weights_only=True),
+    ModelCheckpoint('model-tgs-salt.h5', verbose=1,
+                    save_best_only=True, save_weights_only=True),
     TensorBoard(log_dir=log_dir, update_freq='batch')
 ]
 

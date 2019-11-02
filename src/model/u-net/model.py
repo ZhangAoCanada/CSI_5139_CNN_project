@@ -4,6 +4,7 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+import tensorflow.keras.backend as K
 from skimage.io import concatenate_images, imread, imshow
 from skimage.transform import resize
 from sklearn.model_selection import train_test_split
@@ -94,7 +95,71 @@ class Unet(object):
         self.model = model
         return model
 
-    def compileModel(self):
-        self.model.compile(optimizer=Adam(), loss="binary_crossentropy",
-                           metrics=["accuracy",MeanIoU(num_classes=2),Precision(),Recall()])
+    def compileModel(self, lossname="CE"):
+        if lossname == "CE":
+            self.model.compile(optimizer=Adam(), loss="binary_crossentropy",
+                               metrics=[self.MetricsIOU, Precision(), Recall()])
+        if lossname == "Weighted":
+            self.model.compile(optimizer=Adam(), loss=self.WeightedLoss,
+                               metrics=[self.MetricsIOU, Precision(), Recall()])
+        if lossname == "MSE":
+            self.model.compile(optimizer=Adam(), loss=self.MSE,
+                               metrics=[self.MetricsIOU, Precision(), Recall()])
+        if lossname == "Dice":
+            self.model.compile(optimizer=Adam(), loss=self.DiceLoss,
+                               metrics=[self.MetricsIOU, Precision(), Recall()])
         self.model.summary()
+
+    def RegularLoss(self, y_true, y_pred):
+        logits = K.reshape(y_pred, [-1, ])
+        labels = K.reshape(y_true, [-1, ])
+        loss = K.binary_crossentropy(target=labels, output=logits)
+        loss = K.mean(loss)
+        return loss
+
+    def MSE(self, y_true, y_pred):
+        loss = K.mean(K.square(y_true - y_pred))
+        return loss
+
+    def WeightedLoss(self, y_true, y_pred):
+        one_weight = 0.89
+        zero_weight = 0.11
+        logits = K.reshape(y_pred, [-1, ])
+        labels = K.reshape(y_true, [-1, ])
+        loss = K.binary_crossentropy(target=labels, output=logits)
+        weight_vector = labels * one_weight + (1.-labels) * zero_weight
+        loss = weight_vector * loss
+        loss = K.mean(loss)
+        return loss
+
+    def DiceLoss(self, y_true, y_pred):
+        numerator = 2 * K.sum(y_true * y_pred)
+        denominator = K.sum(y_true + y_pred)
+        return 1 - (numerator + 1) / (denominator + 1)
+
+    def JaccardLoss(self, y_true, y_pred):
+        numerator = K.sum(y_true * y_pred)
+        denominator = K.sum(y_true + y_pred - y_true * y_pred)
+        return 1 - (numerator + 1) / (denominator + 1)
+
+    def MaskIoU(self, mask1, mask2):
+        intersection = mask1 * mask2
+        union = mask2 + mask2 - intersection
+        iou = tf.reduce_mean(intersection) / (tf.reduce_mean(union) + 1e-6)
+        acc_mask1 = tf.reduce_mean(intersection) / \
+            (tf.reduce_mean(mask1) + 1e-6)
+        acc_mask2 = tf.reduce_mean(intersection) / \
+            (tf.reduce_mean(mask2) + 1e-6)
+        return iou, acc_mask1, acc_mask2
+
+    def MetricsIOU(self, y_true, y_pred):
+        overall_iou, precision, recall = self.MaskIoU(y_pred, y_true)
+        return overall_iou
+
+    def MetricsP(self, y_true, y_pred):
+        overall_iou, precision, recall = self.MaskIoU(y_pred, y_true)
+        return precision
+
+    def MetricsR(self, y_true, y_pred):
+        overall_iou, precision, recall = self.MaskIoU(y_pred, y_true)
+        return recall
