@@ -276,7 +276,7 @@ if __name__ == "__main__":
         "MSE"
     """
     model_names = ["convsegnet"]
-    loss_names = ["weighted"]
+    loss_names = ["MSE", "weighted"]
 
     # debug("convsegnet", "regular")
     for k in range(len(model_names)):
