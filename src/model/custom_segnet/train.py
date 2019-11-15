@@ -184,6 +184,8 @@ def debug(model_name, loss_name):
     plt.show()
 
 def main(model_name, loss_name):
+    tf.reset_default_graph()
+    
     batch_size = 5
     epoches = 300
     input_size_orig = (384, 1280)
@@ -194,7 +196,7 @@ def main(model_name, loss_name):
     train_output_dir = "../../data_processing/train_out/"
     test_input_dir = "../../data_processing/test_in/"
     test_output_dir = "../../data_processing/test_out/"
-    log_dir = 'logs2/' + 'newdatalr_' + model_name + '_' + loss_name + "/"
+    log_dir = 'logs2/' + 'newdatalr_' + model_name + '_smaller_' + loss_name + "/"
 
     # create data generator
     trainGo = DataGenerator(train_input_dir, train_output_dir, input_size_orig, scale, batch_size)
@@ -273,8 +275,8 @@ if __name__ == "__main__":
         "weighted"
         "MSE"
     """
-    model_names = ["segnet", "convsegnet"]
-    loss_names = ["regular", "dice", "MSE", "weighted"]
+    model_names = ["convsegnet"]
+    loss_names = ["weighted"]
 
     # debug("convsegnet", "regular")
     for k in range(len(model_names)):

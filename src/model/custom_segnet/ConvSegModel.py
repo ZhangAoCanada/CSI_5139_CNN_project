@@ -52,7 +52,7 @@ class ConvSegNet:
         x = self.Conv2D_BN_ReLU(x, filters, [3,3], strides=(2,2), padding='same')
         return x
 
-    def DeConvBlock(self, x ,filters, final_filters):
+    def DeConvThreeBlock(self, x ,filters, final_filters):
         x = self.DeConv2D_BN_ReLU(x, filters, [3,3], strides=(1,1), padding='same')
         x = self.DeConv2D_BN_ReLU(x, final_filters, [3,3], strides=(1,1), padding='same')
         x = self.DeConv2D_BN_ReLU(x, final_filters, [3,3], strides=(2,2), padding='same')
@@ -69,17 +69,17 @@ class ConvSegNet:
         return x
 
     def ConvSegBody(self):
-        x = self.ConvTwoBlock(self.X, 64)
-        x = self.ConvTwoBlock(x, 128)
-        x = self.ConvTwoBlock(x, 256)
-        x = self.ConvTwoBlock(x, 512)
-        x = self.ConvTwoBlock(x, 512)
+        x = self.ConvThreeBlock(self.X, 64)
+        x = self.ConvThreeBlock(x, 128)
+        x = self.ConvThreeBlock(x, 256)
+        x = self.ConvThreeBlock(x, 512)
+        # x = self.ConvThreeBlock(x, 512)
 
-        x = self.DeConvTwoBlock(x, 512, 512)
-        x = self.DeConvTwoBlock(x, 512, 512)
-        x = self.DeConvTwoBlock(x, 512, 256)
-        x = self.DeConvTwoBlock(x, 256, 128)
-        x = self.DeConvTwoBlock(x, 128, 64)
+        # x = self.DeConvThreeBlock(x, 512, 512)
+        x = self.DeConvThreeBlock(x, 512, 512)
+        x = self.DeConvThreeBlock(x, 512, 256)
+        x = self.DeConvThreeBlock(x, 256, 128)
+        x = self.DeConvThreeBlock(x, 128, 64)
         x = self.LastLayer(x, 64, 1)
         return Model(self.X, x)
     
