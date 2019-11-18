@@ -8,6 +8,7 @@ from PIL import Image
 import cv2
 import skimage.io
 import skimage.color
+import colorsys
 from skimage.util import img_as_ubyte
 
 import numpy as np
@@ -93,7 +94,7 @@ def main(model_name, loss_name, test_img_num):
     model_input_size = (input_size_orig[0]//scale, input_size_orig[1]//scale)
 
     oneimg_name = "../../data_processing/test_in/" + str(test_img_num) + ".png"
-    onegt_name = "../../data_processing/test_out/" + str(test_img_num) + "10.npy" 
+    onegt_name = "../../data_processing/test_out/" + str(test_img_num) + ".npy" 
     log_dir = 'logs2/' + 'newdatalr_' + model_name + '_' + loss_name + "/"
     oneimg, onegt = GetInputGt(oneimg_name, onegt_name, input_size_orig, scale)
     oneimg /= 45000
@@ -115,16 +116,22 @@ def main(model_name, loss_name, test_img_num):
 
     model.load_weights(log_dir + 'trained_weights_stage_1.h5')
     pred = model.predict(oneimg)
-    pred = TransferPred(pred)
+    print(pred.shape)
+    mask_pred = TransferPred(pred)
 
     test_image = np.squeeze(oneimg)
-    mask_pred = np.squeeze(pred)
+    mask_pred = np.squeeze(mask_pred)
     test_mask = np.squeeze(onegt)
+
+    test_image_backup = test_image.copy()
 
     test_image = skimage.color.gray2rgb(test_image)
     test_image = img_as_ubyte(test_image)
 
-    masked_image_pred = ApplyMask(test_image, mask_pred)
+    test_image_backup = skimage.color.gray2rgb(test_image_backup)
+    test_image_backup = img_as_ubyte(test_image_backup)
+
+    masked_image_pred = ApplyMask(test_image_backup, mask_pred)
     masked_image_gt = ApplyMask(test_image, test_mask)
     
     fig = plt.figure()
@@ -152,4 +159,4 @@ if __name__ == "__main__":
     model_name = model_names[0]
     loss_name = loss_names[0]
 
-    main(model_name, loss_name, 10)
+    main(model_name, loss_name, 50)

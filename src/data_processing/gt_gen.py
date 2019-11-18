@@ -124,7 +124,6 @@ num_start = 0
 # num_another = ReadInputOutput(test_2012_input_dir, test_2012_gt_dir, num_middle7, "_11", on_test = True, train_set = True)
 
 
-
 num_middle1 = ReadInputOutput(test_2015_input_dir, test_2015_gt_dir, num_start, "_10", on_test = True, train_set = False)
 num_middle2 = ReadInputOutput(test_2015_input_dir, test_2015_gt_dir, num_middle1, "_11", on_test = True, train_set = False)
 
