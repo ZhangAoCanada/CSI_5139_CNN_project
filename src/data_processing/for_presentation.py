@@ -62,56 +62,55 @@ def display_instances(image, boxes, masks, class_ids, class_names,
         assert boxes.shape[0] == masks.shape[-1] == class_ids.shape[0]
 
 ##################################################################################
-    # # Show area outside image boundaries.
-    # height, width = image.shape[:2]
-    # ax.set_ylim(height + 10, -10)
-    # ax.set_xlim(-10, width + 10)
-    # ax.axis('off')
-    # ax.set_title(title)
+    # Show area outside image boundaries.
+    height, width = image.shape[:2]
+    ax.set_ylim(height + 10, -10)
+    ax.set_xlim(-10, width + 10)
+    ax.axis('off')
+    ax.set_title(title)
 ##################################################################################
 
     masked_image = image.astype(np.uint32).copy()
     for i in range(N):
         class_id = class_ids[i]
         class_name = class_names[class_id]
-        if class_name == "car" or class_name == "truck":
-            color = colors[class_id]
-            score = scores[i] if scores is not None else None
-            caption = "{} {:.3f}".format(class_name, score) if score else class_name
+        color = colors[class_id]
+        score = scores[i] if scores is not None else None
+        caption = "{} {:.3f}".format(class_name, score) if score else class_name
 
-            # Bounding box
-            if not np.any(boxes[i]):
-                # Skip this instance. Has no bbox. Likely lost in image cropping.
-                continue
-            y1, x1, y2, x2 = boxes[i]
-            if show_bbox:
-                p = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=2,
-                                    alpha=0.7, linestyle="dashed",
-                                    edgecolor=color, facecolor='none')
-                ax.add_patch(p)
-
-            ax.text(x1, y1 + 8, caption,
-                    color='w', size=11, backgroundcolor="none")
-
-            # Mask
-            mask = masks[:, :, i]
-            if show_mask:
-                masked_image = apply_mask(masked_image, mask, color)
-        else:
+        # Bounding box
+        if not np.any(boxes[i]):
+            # Skip this instance. Has no bbox. Likely lost in image cropping.
             continue
+        y1, x1, y2, x2 = boxes[i]
+        if show_bbox:
+            p = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=2,
+                                alpha=0.7, linestyle="dashed",
+                                edgecolor=color, facecolor='none')
+            ax.add_patch(p)
+
+        ax.text(x1, y1 + 8, caption,
+                color='w', size=5, backgroundcolor="none")
+
+        # Mask
+        mask = masks[:, :, i]
+        if show_mask:
+            masked_image = apply_mask(masked_image, mask, color)
+        # else:
+        #     continue
 
 ##################################################################################
-        # # Mask Polygon
-        # # Pad to ensure proper polygons for masks that touch image edges.
-        # padded_mask = np.zeros(
-        #     (mask.shape[0] + 2, mask.shape[1] + 2), dtype=np.uint8)
-        # padded_mask[1:-1, 1:-1] = mask
-        # contours = find_contours(padded_mask, 0.5)
-        # for verts in contours:
-        #     # Subtract the padding and flip (y, x) to (x, y)
-        #     verts = np.fliplr(verts) - 1
-        #     p = Polygon(verts, facecolor="none", edgecolor=color)
-        #     ax.add_patch(p)
+        # Mask Polygon
+        # Pad to ensure proper polygons for masks that touch image edges.
+        padded_mask = np.zeros(
+            (mask.shape[0] + 2, mask.shape[1] + 2), dtype=np.uint8)
+        padded_mask[1:-1, 1:-1] = mask
+        contours = find_contours(padded_mask, 0.5)
+        for verts in contours:
+            # Subtract the padding and flip (y, x) to (x, y)
+            verts = np.fliplr(verts) - 1
+            p = Polygon(verts, facecolor="none", edgecolor=color)
+            ax.add_patch(p)
 ##################################################################################
     return masked_image
 
@@ -126,6 +125,18 @@ def apply_mask(image, mask, color, alpha=0.5):
     return image
 
 def random_colors(N, bright=True):
+    """
+    Generate random colors.
+    To get visually distinct colors, generate them in HSV space then
+    convert to RGB.
+    """
+    brightness = 1.0 if bright else 0.7
+    hsv = [(i / N, 1, brightness) for i in range(N)]
+    colors = list(map(lambda c: colorsys.hsv_to_rgb(*c), hsv))
+    # random.shuffle(colors)
+    return colors
+
+def RandomColors(N, bright=True):
     """
     Generate random colors.
     To get visually distinct colors, generate them in HSV space then
@@ -275,7 +286,7 @@ def main(kitti_dir, prefix, mode = "test", if_2015 = True, if_MRCNN = False):
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
 
-    i = 0
+    i = 15
     img_count = str(i)
     zero_len = name_len - len(img_count)
     img_name = (zero_len * "0") + img_count + "_11"
@@ -285,6 +296,7 @@ def main(kitti_dir, prefix, mode = "test", if_2015 = True, if_MRCNN = False):
     GANet_img = skimage.io.imread(GANet_disp_dir + img_name + ".png")
     GANet_img = skimage.color.gray2rgb(GANet_img)
     GANet_img = img_as_ubyte(GANet_img)
+    GANet_img = GANet_img / GANet_img.max()
 
     if if_MRCNN:
         r = MRcnnPred(model, left_img)
@@ -297,15 +309,18 @@ def main(kitti_dir, prefix, mode = "test", if_2015 = True, if_MRCNN = False):
                                         class_names, r['scores'], colors = colors_all, 
                                         ax = ax1, fig = fig)
 
-        masked_img2 = display_instances(GANet_img, r['rois'], r['masks'], r['class_ids'], 
-                                        class_names, r['scores'], colors = colors_all, 
-                                        ax = ax1, fig = fig)
+        display_image = masked_img1.astype(np.uint8)
 
-        display_image = np.concatenate([masked_img1, masked_img2], axis = 0)
-        ax1.clear()
+        # masked_img2 = display_instances(GANet_img, r['rois'], r['masks'], r['class_ids'], 
+        #                                 class_names, r['scores'], colors = colors_all, 
+        #                                 ax = ax1, fig = fig)
+
+        # display_image = np.concatenate([masked_img1, masked_img2], axis = 0)
+        # ax1.clear()
         ax1.imshow(display_image.astype(np.uint8))
         ax1.axis("off")
-        plt.savefig("mrcnn_presentation.png")
+        plt.savefig("presentation/mrcnn_presentation.png")
+        # plt.show()
 
     else:
         with open(prefix + "/" + img_name + ".pickle", "rb") as f:
@@ -316,14 +331,15 @@ def main(kitti_dir, prefix, mode = "test", if_2015 = True, if_MRCNN = False):
         masked_image_disp = ApplyMask(GANet_img, mask_fg)
 
         ax1.clear()
-        ax1.imshow(left_img)
+        # ax1.imshow(left_img)
         # ax1.imshow(right_img)
-        # ax1.imshow(masked_image_left)
+        ax1.imshow(masked_image_left)
         # ax1.imshow(masked_image_disp)
+        # ax1.imshow(GANet_img / GANet_img.max())
         ax1.axis("off")
 
-        plt.savefig("forpresentation1.png")
-        plt.show()
+        plt.savefig("presentation/left_mask.png")
+        # plt.show()
 
 if __name__ == "__main__":
     
