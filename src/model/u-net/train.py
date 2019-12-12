@@ -59,6 +59,7 @@ def read_img(filepath, width=1280, height=384):
         img_list.append(img_pad)
     return np.asfarray(img_list)
 
+
 def read_gt(filepath, width=1280, height=384):
     gt_list = []
     all_files = glob(filepath+"/*npy")
@@ -68,6 +69,7 @@ def read_gt(filepath, width=1280, height=384):
         gt_pad = resize_data(gt_pad)
         gt_list.append(gt_pad)
     return np.asfarray(gt_list)
+
 
 img_list = read_img("./src/data_processing/train_in")
 gt_list = read_gt("./src/data_processing/train_out")
@@ -110,7 +112,7 @@ lossNames = ["CE", "MSE", "Dice", "Weighted"]
 unet.compileModel(lossNames[0])
 
 log_dir = "./logs_00"
-callbacks = [   
+callbacks = [
     EarlyStopping(patience=5, verbose=1),
     ReduceLROnPlateau(factor=0.1, patience=3, min_lr=0.00001, verbose=1),
     ModelCheckpoint('model-tgs-salt.h5', verbose=1,

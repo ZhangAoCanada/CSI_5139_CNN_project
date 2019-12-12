@@ -52,6 +52,7 @@ def read_gt(filepath, width=1280, height=384):
         gt_list.append(gt_pad)
     return np.asfarray(gt_list)
 
+
 def main():
     # Load testing set into RAM
     img_list = read_img("./src/data_processing/test_in")
@@ -76,29 +77,30 @@ def main():
     iou_score = np.sum(intersection) / np.sum(union)
 
     print("IOU = {}".format(iou_score))
-    
+
     # Select random index from testing set and show.
-    for i in range(5): 
+    for i in range(5):
         ix = random.randint(0, 300)
         has_mask = preds_test[ix].max() > 0
         fig, ax = plt.subplots(2, 2)
         print("show img {} and its mask".format(ix))
-        ax[0,0].imshow(img_list[ix, ..., 0], cmap='seismic')
+        ax[0, 0].imshow(img_list[ix, ..., 0], cmap='seismic')
         if has_mask:
-            ax[0,0].contour(preds_test[ix].squeeze(), colors='k', levels=[0.5])
-        ax[0,0].set_title('Seismic')
+            ax[0, 0].contour(preds_test[ix].squeeze(),
+                             colors='k', levels=[0.5])
+        ax[0, 0].set_title('Seismic')
 
-        ax[0,1].imshow(preds_test[ix].squeeze(),  cmap='gray')
-        ax[0,1].set_title('test')
+        ax[0, 1].imshow(preds_test[ix].squeeze(),  cmap='gray')
+        ax[0, 1].set_title('test')
 
-
-        ax[1,0].imshow(img_list[ix, ..., 0], cmap='seismic')
+        ax[1, 0].imshow(img_list[ix, ..., 0], cmap='seismic')
         if has_mask:
-            ax[1,0].contour(gt_list[ix].squeeze(), colors='k', levels=[0.5])
-        ax[1,0].set_title('Seismic')
+            ax[1, 0].contour(gt_list[ix].squeeze(), colors='k', levels=[0.5])
+        ax[1, 0].set_title('Seismic')
 
-        ax[1,1].imshow(gt_list[ix].squeeze(),  cmap='gray')
-        ax[1,1].set_title('ground truth')
+        ax[1, 1].imshow(gt_list[ix].squeeze(),  cmap='gray')
+        ax[1, 1].set_title('ground truth')
         show()
+
 
 main()
