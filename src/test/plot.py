@@ -181,4 +181,4 @@ UNET_DICE_IOU = ReadCsv(
     "./src/test/CSV/run-DICE_train-tag-batch_MetricsIOU.csv")
 
 PlotAndSave_layer(UNET_MSE_IOU, UNET_CE_IOU, UNET_BCE_IOU, UNET_DICE_IOU, [0, 25000], [
-                  0, 0.93], "MSE", "CE", "BCE", "DICE", "Trainning IOU of modified U-Net", "Steps", "IOU", "unet_loss")
+                  0, 0.93], "MSE", "CE", "BCE", "DICE", "Trainning IOU of modified U-Net", "Steps", "IOU", "unet_iou")
