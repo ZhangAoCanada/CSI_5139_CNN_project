@@ -1,31 +1,15 @@
-import os
 import random
 from glob import glob
-from itertools import chain
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import tensorflow as tf
-from skimage.io import concatenate_images, imread, imshow, show
-from skimage.morphology import label
+from model import Unet
+from skimage.io import imread, show
 from skimage.transform import resize
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import (EarlyStopping, ModelCheckpoint,
                                         ReduceLROnPlateau, TensorBoard)
-from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
-                                     Conv2DTranspose, Dense, Dropout,
-                                     GlobalMaxPool2D, Input, Lambda,
-                                     MaxPooling2D, RepeatVector, Reshape, add,
-                                     concatenate)
-from tensorflow.keras.models import Model, load_model
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.preprocessing.image import (ImageDataGenerator,
-                                                  array_to_img, img_to_array,
-                                                  load_img)
-from tqdm import tnrange, tqdm_notebook
-
-from model import Unet
+from tensorflow.keras.layers import (Input)
 
 
 def pad_data(data, width=1280, height=384):
@@ -62,7 +46,7 @@ def read_img(filepath, width=1280, height=384):
 
 def read_gt(filepath, width=1280, height=384):
     gt_list = []
-    all_files = glob(filepath+"/*npy")
+    all_files = glob(filepath + "/*npy")
     for i in range(len(all_files)):
         gt = np.load("./src/data_processing/train_out/" + str(i) + ".npy")
         gt_pad = pad_data(gt)
@@ -92,7 +76,7 @@ if has_mask:
     ax[0].contour(gt_list[ix].squeeze(), colors='k', levels=[0.5])
 ax[0].set_title('Seismic')
 
-ax[1].imshow(gt_list[ix].squeeze(),  cmap='gray')
+ax[1].imshow(gt_list[ix].squeeze(), cmap='gray')
 ax[1].set_title('Salt')
 show()
 #######################################################

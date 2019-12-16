@@ -1,21 +1,11 @@
-import os
-import random
 from glob import glob
 
-import matplotlib.pyplot as plt
 import numpy as np
-import tensorflow as tf
-from skimage.io import concatenate_images, imread, imshow, show
+from skimage.io import imread
 from skimage.transform import resize
-from sklearn.model_selection import train_test_split
-from tensorflow.keras.callbacks import (EarlyStopping, ModelCheckpoint,
-                                        ReduceLROnPlateau, TensorBoard)
 from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
-                                     Conv2DTranspose, Dense, Dropout,
-                                     GlobalMaxPool2D, Input, Lambda,
-                                     MaxPooling2D, RepeatVector, Reshape, add,
-                                     concatenate)
-from tensorflow.keras.models import Model, load_model
+                                     Conv2DTranspose, Input, MaxPooling2D, concatenate)
+from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 
 
